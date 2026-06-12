@@ -7,6 +7,10 @@ const migrationSql = readFileSync(
   join(process.cwd(), "packages/db/migrations/0001_initial_schema.sql"),
   "utf8"
 );
+const authMigrationSql = readFileSync(
+  join(process.cwd(), "packages/db/migrations/0002_better_auth.sql"),
+  "utf8"
+);
 
 const requiredTables = [
   "tenant_settings",
@@ -51,5 +55,13 @@ describe("MVP schema migration", () => {
     });
 
     expect(report.missingTenantId).toEqual(["files"]);
+  });
+
+  test("adds Better Auth default tables and links application users", () => {
+    for (const table of ['"user"', "session", "account", "verification"]) {
+      expect(authMigrationSql).toContain(`create table ${table}`);
+    }
+    expect(authMigrationSql).toContain("auth_user_id");
+    expect(authMigrationSql).toContain("drop column password_hash");
   });
 });

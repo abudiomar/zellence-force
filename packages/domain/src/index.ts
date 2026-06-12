@@ -75,6 +75,33 @@ export function canRole(role: UserRole, permission: Permission): boolean {
   return ROLE_PERMISSIONS[role].includes(permission);
 }
 
+export type PermissionScope = "tenant" | "assigned-event" | "read-only" | "denied";
+
+export type PermissionDecision = {
+  allowed: boolean;
+  scope: PermissionScope;
+};
+
+export function authorizeRole(role: UserRole, permission: Permission): PermissionDecision {
+  if (!canRole(role, permission)) {
+    return { allowed: false, scope: "denied" };
+  }
+
+  if (
+    role === "supervisor" &&
+    (permission === PERMISSIONS.VIEW_ASSIGNED_EVENT ||
+      permission === PERMISSIONS.RECORD_ASSIGNED_ATTENDANCE)
+  ) {
+    return { allowed: true, scope: "assigned-event" };
+  }
+
+  if (permission === PERMISSIONS.READ_LIMITED) {
+    return { allowed: true, scope: "read-only" };
+  }
+
+  return { allowed: true, scope: "tenant" };
+}
+
 export const EVENT_STATUSES = [
   "draft",
   "recruiting",

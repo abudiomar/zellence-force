@@ -1,0 +1,17 @@
+{
+  "name": "@zellforce/contracts",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun run typecheck",
+    "typecheck": "bunx tsc -b",
+    "test": "vitest run --root ../.. packages/contracts --passWithNoTests"
+  },
+  "dependencies": {
+    "@zellforce/domain": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}

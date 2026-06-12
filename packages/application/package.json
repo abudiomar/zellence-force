@@ -1,0 +1,19 @@
+{
+  "name": "@zellforce/application",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun run typecheck",
+    "typecheck": "bunx tsc -b",
+    "test": "vitest run --root ../.. packages/application --passWithNoTests"
+  },
+  "dependencies": {
+    "@zellforce/config": "workspace:*",
+    "@zellforce/contracts": "workspace:*",
+    "@zellforce/db": "workspace:*",
+    "@zellforce/domain": "workspace:*"
+  }
+}

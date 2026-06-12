@@ -38,6 +38,10 @@ const migrations = [
   {
     version: "0001_initial_schema",
     fileName: "0001_initial_schema.sql"
+  },
+  {
+    version: "0002_better_auth",
+    fileName: "0002_better_auth.sql"
   }
 ] as const;
 
@@ -105,7 +109,11 @@ export async function assertTenantScopedTableMetadata(client: DbClient): Promise
       and tables.table_type = 'BASE TABLE'
       and tables.table_name not in (
         'schema_migrations',
-        'tenants'
+        'tenants',
+        'user',
+        'session',
+        'account',
+        'verification'
       )
     group by tables.table_name
     order by tables.table_name

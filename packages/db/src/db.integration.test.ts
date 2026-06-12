@@ -49,10 +49,40 @@ describe.skipIf(!hasTestDatabase)("Postgres integration", () => {
     const secondRun = await runMigrations(dbPool());
     const applied = await getAppliedMigrations(dbPool());
 
-    expect(firstRun.applied).toEqual(["0001_initial_schema"]);
+    expect(firstRun.applied).toEqual(["0001_initial_schema", "0002_better_auth"]);
     expect(secondRun.applied).toEqual([]);
-    expect(secondRun.skipped).toEqual(["0001_initial_schema"]);
-    expect(applied).toEqual([{ version: "0001_initial_schema" }]);
+    expect(secondRun.skipped).toEqual(["0001_initial_schema", "0002_better_auth"]);
+    expect(applied).toEqual([
+      { version: "0001_initial_schema" },
+      { version: "0002_better_auth" }
+    ]);
+  });
+
+  test("creates Better Auth schema and removes application password storage", async () => {
+    await runMigrations(dbPool());
+
+    const tables = await dbPool().query(`
+      select table_name
+      from information_schema.tables
+      where table_schema = 'public'
+        and table_name in ('user', 'session', 'account', 'verification')
+      order by table_name
+    `);
+    const columns = await dbPool().query(`
+      select column_name
+      from information_schema.columns
+      where table_schema = 'public' and table_name = 'users'
+      order by column_name
+    `);
+
+    expect(tables.rows.map((row) => row.table_name)).toEqual([
+      "account",
+      "session",
+      "user",
+      "verification"
+    ]);
+    expect(columns.rows.map((row) => row.column_name)).toContain("auth_user_id");
+    expect(columns.rows.map((row) => row.column_name)).not.toContain("password_hash");
   });
 
   test("creates required tenant-owned schema without missing tenant_id columns", async () => {
