@@ -1,0 +1,20 @@
+{
+  "name": "@zellforce/db",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun run typecheck",
+    "typecheck": "bunx tsc -b",
+    "test": "vitest run --root ../.. packages/db --passWithNoTests",
+    "test:integration": "bun run src/db-integration-check.ts && vitest run --root ../.. packages/db/src/db.integration.test.ts"
+  },
+  "dependencies": {
+    "pg": "^8.21.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0"
+  }
+}

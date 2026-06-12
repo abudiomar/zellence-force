@@ -1,0 +1,16 @@
+{
+  "name": "@zellforce/domain",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun run typecheck",
+    "typecheck": "bunx tsc -b",
+    "test": "vitest run --root ../.. packages/domain"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
+}
