@@ -463,55 +463,78 @@ Architecture principle applied:
 
 Feature checklists:
 
-### P3-F001 Arabic-first app shell
+### P3-F001 UI test harness and token foundation
+
+- Sources: `docs/07A:114-303`, `docs/07A:596-609`, `docs/05:404-457`.
+- RED observed: `@zellforce/ui` import/render tests failed before React primitives, semantic tokens, and JSDOM setup existed.
+- GREEN: `packages/ui` now exports `UI_TOKENS`, `UI_DENSITIES`, `UI_STATUS_TONES`, `tokens.css`, and reusable React primitives.
+- Code-structure check: `packages/ui` owns reusable UI mechanics only; no Next.js, Better Auth, DB, Actions, or API clients.
+- Architecture check: UI package passes deletion test because token/control/table/form logic would otherwise duplicate across screens.
+- DRY check: color, radius, typography, spacing, focus, status tone, density values live in tokens.
+- Verify: `bun run test packages/ui`, `bun run typecheck`, `bun run build`.
+
+### P3-F002 Arabic/English locale and RTL shell
 
 - Sources: `docs/07:187-202`, `docs/07:504-523`, `docs/04:1225-1249`, `docs/05:433-457`.
-- RED: failing tests for RTL default, language switch, sidebar mirroring, LTR mixed content.
-- GREEN: implement Next.js app shell, direction provider, i18n provider.
-- Code-structure check: shell owns layout mechanics; role dashboards own content.
-- Architecture check: i18n Interface hides translation loading details.
-- DRY check: direction/language constants in one place.
-- Verify: RTL/LTR component tests, Playwright shell smoke, keyboard nav.
-- Context/docs update: update docs if route names or IA changes.
+- RED observed: root document had static direction, no Arabic/English catalogs, no persistent locale/density behavior.
+- GREEN: `next-intl` without locale URL prefixes, `zf_locale` cookie defaulting to Arabic, `zf_density` preference, server-rendered `lang`/`dir`, protected shell, responsive sidebar/drawer, user/density/language/logout controls.
+- Code-structure check: `apps/web` owns routing, locale loading, auth state, nav registry, and API data.
+- Architecture check: locale/direction Interface lives in `@zellforce/domain` and `apps/web/src/i18n`.
+- DRY check: language constants live in `@zellforce/domain`; nav lives in one registry.
+- Verify: `bun run test apps/web`, `bun run test:e2e`.
 
-### P3-F002 Design tokens and status system
+### P3-F003 Core UI primitives and existing screen refactor
 
-- Sources: `docs/07A:114-303`, `docs/07A:596-609`, `docs/06:935-1040`.
-- RED: failing tests or static checks for missing token use on status badges.
-- GREEN: implement token package and status-to-visual mapping.
-- Code-structure check: status visuals are UI mechanics; product status meaning remains domain constants.
-- Architecture check: token Module Interface is stable and small.
-- DRY check: no hardcoded status colors in screens.
-- Verify: token tests, visual snapshot where available, contrast checks.
-- Context/docs update: design token ADR if final visual foundation accepted.
+- Sources: `docs/07A:411-455`, `docs/07:424-503`, `docs/07:546-569`.
+- RED observed: existing login/settings screens used raw controls and inconsistent state handling.
+- GREEN: login, dashboard placeholder, user settings, and tenant settings now compose shared `@zellforce/ui` primitives.
+- Implemented primitives: `Button`, `IconButton`, `TextInput`, `TextArea`, `Select`, `Checkbox`, `Switch`, `Field`, `FormSection`, `ErrorSummary`, `ReadOnlyField`, `PageHeader`, `SectionPanel`, `Tabs`, `Toolbar`, `FilterBar`, `Pagination`.
+- Code-structure check: screen Server Components pass data/labels; interactive table config lives in client child component.
+- DRY check: form and control styling no longer repeated per screen.
+- Verify: `bun run test apps/web`, `bun run build`.
 
-### P3-F003 Table/list/grid patterns
+### P3-F004 Status and screen-state system
+
+- Sources: `docs/06:935-1040`, `docs/07:474-503`, `docs/05:404-430`.
+- RED observed: domain statuses lacked exhaustive web visual mapping.
+- GREEN: `apps/web/src/ui/status-visuals.ts` maps domain statuses to generic UI tones; `StatusBadge`, `AlertBanner`, `ScreenState`, `Skeleton`, and `ProgressIndicator` provide state patterns.
+- Code-structure check: product status meaning remains in `@zellforce/domain`; web owns display mapping; UI receives generic tone only.
+- DRY check: no per-screen status color truth.
+- Verify: `bun run test apps/web`, `bun run test packages/domain`.
+
+### P3-F005 Operational data patterns
 
 - Sources: `docs/07:365-423`, `docs/07A:350-410`, `docs/07A:411-455`.
-- RED: failing component tests for sorting/filter/selection/empty/loading/error/keyboard behavior.
-- GREEN: implement index table, spreadsheet grid, roster list patterns.
-- Code-structure check: table pattern owns UI mechanics; feature screen owns columns/actions.
-- Architecture check: table Interface does not expose TanStack internals unless intentional.
-- DRY check: filter/pagination/sort state shape shared with API contract.
-- Verify: component tests, accessibility checks, RTL table checks.
-- Context/docs update: no docs unless pattern changes.
+- RED observed: no standard sorting, selection, row activation, spreadsheet grid, or roster list component.
+- GREEN: `DataTable`, `SpreadsheetGrid`, and `RosterList` provide tested fixture patterns without adding applicant/event/attendance/payment workflow behavior.
+- Code-structure check: patterns own UI mechanics; feature screens own rows, columns, labels, and commands.
+- Architecture check: table/grid/list Interfaces create leverage for Phase 4+ screens without leaking workflow logic.
+- Verify: `bun run test packages/ui`, `bun run test:e2e`.
 
-### P3-F004 Form, drawer, modal, state patterns
+### P3-F006 Forms, drawers, dialogs, and mutation feedback
 
 - Sources: `docs/07:424-503`, `docs/07A:411-455`, `docs/05:404-430`.
-- RED: failing tests for validation display, unsaved changes, locked/read-only states, dialog focus trap.
-- GREEN: implement form layout primitives, drawer/modal patterns, state components.
-- Code-structure check: UI pattern owns interaction mechanics; Action/API owns validation truth.
-- Architecture check: form pattern has leverage across long operational forms.
-- DRY check: required-field, validation, locked-state components reused.
-- Verify: unit/component tests, keyboard/focus tests, mobile viewport smoke.
-- Context/docs update: none unless UX rule changes.
+- RED observed: settings forms had no shared validation/error/drawer/dialog pattern.
+- GREEN: app uses React Hook Form/Zod for login and shared UI form primitives; Radix-backed `Dialog`, `Drawer`, `AlertDialog`, `ToastProvider`, and `useToast` exist for future mutations.
+- Code-structure check: UI primitives remain form-library independent; app-level forms own validation integration.
+- Verify: `bun run test packages/ui`, `bun run test apps/web`.
+
+### P3-F007 Responsive and accessibility gate
+
+- Sources: `docs/07:504-569`, `docs/05:404-457`, `docs/09:494-497`.
+- RED observed: no Playwright responsive/RTL/accessibility smoke tests.
+- GREEN: Playwright suite covers Arabic RTL, English LTR, locale persistence, density persistence, role-aware nav, protected shell, main landmarks, and no page-level overflow at 360, 768, 1280, and 1440 widths.
+- Code-structure check: E2E mocks Express auth/session and `/api/me`; permission visibility still comes from domain permission registry.
+- Verify: `bun run test:e2e`; CI installs Playwright Chromium before E2E.
 
 Exit gate:
 
-- Feature screens can use shell, tables, forms, states, status tokens.
-- Dense pages cannot be built as card grids.
-- RTL/accessibility base passes.
+- Complete in repo.
+- Existing Phase 2 screens use shared UI primitives.
+- Arabic default RTL and English LTR switching work.
+- Locale and density persist across refresh.
+- `@zellforce/ui` is reusable and framework/data independent.
+- Phase 4 screens can compose shell, table, grid, list, form, overlay, status, responsive, and feedback patterns without local substitutes.
 
 ---
 

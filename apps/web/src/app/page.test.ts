@@ -6,11 +6,18 @@ vi.mock("../components/protected-shell", () => ({
   ProtectedShell: ({ children }: { children: ReactNode }) => children
 }));
 
+vi.mock("next-intl/server", () => ({
+  getTranslations: async () => (key: string) => ({
+    operations: "Event staffing operations"
+  })[key] ?? key
+}));
+
 import Page from "./page";
 
 describe("Next app page", () => {
-  test("renders Zell-force shell content", () => {
-    const html = renderToStaticMarkup(createElement(Page));
+  test("renders Zell-force shell content", async () => {
+    const element = await Page();
+    const html = renderToStaticMarkup(createElement(() => element));
 
     expect(html).toContain("Zell-force");
     expect(html).toContain("Event staffing operations");

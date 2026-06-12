@@ -14,6 +14,15 @@ export type UserRole = (typeof USER_ROLES)[number];
 
 export const USER_ROLE_SCHEMA = z.enum(USER_ROLES);
 
+export const SUPPORTED_LANGUAGES = ["ar", "en"] as const;
+export const DEFAULT_LANGUAGE = "ar" as const;
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+export const LANGUAGE_SCHEMA = z.enum(SUPPORTED_LANGUAGES);
+
+export function getTextDirection(language: SupportedLanguage): "rtl" | "ltr" {
+  return language === "ar" ? "rtl" : "ltr";
+}
+
 export function isUserRole(value: unknown): value is UserRole {
   return USER_ROLE_SCHEMA.safeParse(value).success;
 }

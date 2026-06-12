@@ -2,19 +2,58 @@
 
 import React, { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { Menu } from "lucide-react";
+import { Button, Drawer, IconButton, ScreenState } from "@zellforce/ui";
 import type { AuthenticatedUser } from "@zellforce/contracts";
+import type { AppLocale } from "../i18n/config";
 import { authClient } from "../auth/auth-client";
 import { getCurrentActor } from "../auth/api";
 import { getProtectedViewState } from "../auth/auth-flow";
-import { visibleSettingsLinks } from "../auth/navigation";
+import { visibleAppNavItems } from "../navigation/app-nav";
+import { LocaleDensityControls } from "./app-shell/locale-density-controls";
 
 export function ProtectedShell({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const session = authClient.useSession();
+  const pathname = usePathname();
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations("app");
+  const [sessionPending, setSessionPending] = useState(true);
+  const [hasSession, setHasSession] = useState(false);
   const [actor, setActor] = useState<AuthenticatedUser | null>(null);
   const [actorPending, setActorPending] = useState(true);
-  const state = getProtectedViewState(session.isPending, session.data);
+  const [navOpen, setNavOpen] = useState(false);
+  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
+  const state = getProtectedViewState(sessionPending, hasSession ? { session: true } : null);
+
+  useEffect(() => {
+    setDensity(document.documentElement.dataset.density === "compact" ? "compact" : "comfortable");
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void authClient
+      .getSession()
+      .then((result) => {
+        if (active) {
+          setHasSession(Boolean(result.data));
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setHasSession(false);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setSessionPending(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (state === "redirect") {
@@ -35,27 +74,55 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
   }, [router, state]);
 
   if (state !== "authenticated" || actorPending || !actor) {
-    return <main className="center-state">Loading...</main>;
+    return (
+      <main className="center-state">
+        <ScreenState state="loading" title={t("loading")} />
+      </main>
+    );
   }
 
-  const settingsLinks = visibleSettingsLinks(actor.role);
+  const navItems = visibleAppNavItems(actor.role);
+  const nav = (
+    <nav className="app-nav" aria-label="Primary">
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.id}
+            href={item.href}
+            aria-current={pathname === item.href ? "page" : undefined}
+            onClick={() => setNavOpen(false)}
+          >
+            <Icon size={18} aria-hidden />
+            <span>{t(item.labelKey.replace("app.", ""))}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
   return (
     <main className="app-shell">
-      <header className="app-header">
-        <div>
-          <strong>Zell-force</strong>
-          <span>{actor.fullName}</span>
+      <aside className="app-sidebar">
+        <div className="app-sidebar__brand">
+          <strong>{t("brand")}</strong>
+          <span>{t("operations")}</span>
         </div>
-        <nav aria-label="Primary">
-          <Link href="/">Operations</Link>
-          {settingsLinks.includes("users") ? (
-            <Link href="/settings/users">Users</Link>
-          ) : null}
-          {settingsLinks.includes("general") ? (
-            <Link href="/settings/general">Settings</Link>
-          ) : null}
-          <button
+        {nav}
+      </aside>
+      <section className="app-main">
+        <header className="app-topbar">
+          <IconButton className="mobile-menu" label="Open navigation" onClick={() => setNavOpen(true)}>
+            <Menu size={18} aria-hidden />
+          </IconButton>
+          <div>
+            <strong>{actor.fullName}</strong>
+            <span dir="ltr">{actor.email}</span>
+          </div>
+          <LocaleDensityControls locale={locale} density={density} />
+          <Button
             type="button"
+            variant="secondary"
             onClick={() =>
               void authClient.signOut({
                 fetchOptions: {
@@ -64,11 +131,14 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
               })
             }
           >
-            Sign out
-          </button>
-        </nav>
-      </header>
-      {children}
+            {t("signOut")}
+          </Button>
+        </header>
+        <div className="app-content">{children}</div>
+      </section>
+      <Drawer open={navOpen} title={t("brand")} onOpenChange={setNavOpen}>
+        {nav}
+      </Drawer>
     </main>
   );
 }

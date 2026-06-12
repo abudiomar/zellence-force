@@ -58,6 +58,8 @@ Runtime apps live in `apps/`; reusable Interfaces and Implementations live in `p
 
 Forbidden dependencies: web -> db/application, packages -> apps, api -> web internals, worker -> web internals.
 
+UI boundary: `packages/ui` owns tokens/components only. `apps/web` owns Next.js routes, locale loading, auth state, navigation registry, API calls, and product status-to-visual mapping.
+
 ## Architecture Vocabulary
 
 Use these architecture terms:

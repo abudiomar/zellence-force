@@ -1,8 +1,7 @@
 import { z } from "zod";
-import { USER_ROLE_SCHEMA } from "@zellforce/domain";
+import { LANGUAGE_SCHEMA, USER_ROLE_SCHEMA } from "@zellforce/domain";
 
 const EMAIL_SCHEMA = z.string().trim().toLowerCase().email();
-const LANGUAGE_SCHEMA = z.enum(["ar", "en"]);
 const TIMEZONE_SCHEMA = z.string().refine(
   (value) => {
     try {

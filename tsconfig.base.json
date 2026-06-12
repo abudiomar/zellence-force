@@ -19,7 +19,8 @@
       "@zellforce/contracts": ["packages/contracts/src/index.ts"],
       "@zellforce/domain": ["packages/domain/src/index.ts"],
       "@zellforce/db": ["packages/db/src/index.ts"],
-      "@zellforce/ui": ["packages/ui/src/index.ts"]
+      "@zellforce/ui": ["packages/ui/src/index.ts"],
+      "@zellforce/ui/tokens.css": ["packages/ui/src/tokens/tokens.css"]
     }
   }
 }

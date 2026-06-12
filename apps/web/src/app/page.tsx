@@ -1,24 +1,28 @@
 import React from "react";
+import { getTranslations } from "next-intl/server";
+import { PageHeader, SectionPanel, StatusBadge } from "@zellforce/ui";
 import { ProtectedShell } from "../components/protected-shell";
 
 const operationalQueues = [
-  ["Applicant review", "0 pending"],
-  ["Events staffing", "0 active"],
-  ["Payment review", "0 batches"]
+  ["Applicant review", "pending_review", "0 pending"],
+  ["Events staffing", "active", "0 active"],
+  ["Payment review", "in_review", "0 batches"]
 ] as const;
 
-export default function Page() {
+export default async function Page() {
+  const t = await getTranslations("app");
+
   return (
     <ProtectedShell>
       <section className="content-band" aria-labelledby="dashboard-title">
-        <p className="eyebrow">Zell-force / MAG Events</p>
-        <h1 id="dashboard-title">Event staffing operations</h1>
-        <div className="queue-list">
-          {operationalQueues.map(([label, value]) => (
-            <div key={label}>
-              <span>{label}</span>
-              <strong>{value}</strong>
-            </div>
+        <PageHeader eyebrow="Zell-force / MAG Events" title={t("operations")} />
+        <div className="dashboard-grid">
+          {operationalQueues.map(([label, status, value]) => (
+            <SectionPanel key={label}>
+              <strong>{label}</strong>
+              <p>{value}</p>
+              <StatusBadge tone={status === "active" ? "success" : "review"} label={status} />
+            </SectionPanel>
           ))}
         </div>
       </section>
