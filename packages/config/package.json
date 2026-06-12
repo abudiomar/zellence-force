@@ -1,0 +1,16 @@
+{
+  "name": "@zellforce/config",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun run typecheck",
+    "typecheck": "bunx tsc -b",
+    "test": "vitest run --root ../.. packages/config"
+  },
+  "dependencies": {
+    "zod": "^3.25.64"
+  }
+}
