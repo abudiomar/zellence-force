@@ -14,6 +14,8 @@ export function getPublicEnv(): PublicEnv {
   return parsePublicEnv({
     NEXT_PUBLIC_API_URL:
       process.env.NEXT_PUBLIC_API_URL ??
-      (process.env.NODE_ENV === "test" ? "http://localhost:4000" : undefined)
+      (process.env.NODE_ENV === "test" || process.env.NODE_ENV === "development"
+        ? "http://localhost:4000"
+        : undefined)
   });
 }

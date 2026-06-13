@@ -1,4 +1,4 @@
-import type { StatusTone } from "@zellforce/ui";
+import type { StatusTone } from "@zellforce/ui/components/badge";
 
 export type StatusVisual = {
   tone: StatusTone;

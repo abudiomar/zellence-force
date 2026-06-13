@@ -33,7 +33,7 @@ Positive:
 Tradeoffs:
 
 - `apps/web` must keep status visuals and nav registry synchronized with domain permissions/statuses.
-- No Storybook exists in Phase 3; component tests and Playwright are current verification.
+- No Storybook exists in Phase 3; package UI tests, web logic tests, and manual frontend QA are current verification.
 - Next.js Server Components cannot pass function props into client UI primitives; interactive table config must live in client child components.
 
 ## Non-Negotiables

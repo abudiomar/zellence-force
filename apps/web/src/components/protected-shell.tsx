@@ -4,15 +4,25 @@ import React, { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Menu } from "lucide-react";
-import { Button, Drawer, IconButton, ScreenState } from "@zellforce/ui";
+import { ChevronDown, LogOut, Menu } from "lucide-react";
+import { IconButton } from "@zellforce/ui/components/button";
+import { Avatar, AvatarFallback } from "@zellforce/ui/components/avatar";
+import { Drawer } from "@zellforce/ui/components/sheet";
 import type { AuthenticatedUser } from "@zellforce/contracts";
 import type { AppLocale } from "../i18n/config";
 import { authClient } from "../auth/auth-client";
 import { getCurrentActor } from "../auth/api";
 import { getProtectedViewState } from "../auth/auth-flow";
 import { visibleAppNavItems } from "../navigation/app-nav";
-import { LocaleDensityControls } from "./app-shell/locale-density-controls";
+import { LocaleControls } from "./app-shell/locale-controls";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@zellforce/ui/components/dropdown-menu";
 
 export function ProtectedShell({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -24,12 +34,7 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
   const [actor, setActor] = useState<AuthenticatedUser | null>(null);
   const [actorPending, setActorPending] = useState(true);
   const [navOpen, setNavOpen] = useState(false);
-  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
   const state = getProtectedViewState(sessionPending, hasSession ? { session: true } : null);
-
-  useEffect(() => {
-    setDensity(document.documentElement.dataset.density === "compact" ? "compact" : "comfortable");
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -76,7 +81,10 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
   if (state !== "authenticated" || actorPending || !actor) {
     return (
       <main className="center-state">
-        <ScreenState state="loading" title={t("loading")} />
+        <section className="screen-state">
+          <div className="screen-state__spinner" aria-hidden />
+          <h2>{t("loading")}</h2>
+        </section>
       </main>
     );
   }
@@ -100,6 +108,18 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
       })}
     </nav>
   );
+  const activeNavItem =
+    navItems.find((item) => item.href === pathname) ??
+    navItems.find((item) => item.id === "settings" && pathname.startsWith("/settings")) ??
+    navItems.find((item) => item.href !== "/" && pathname.startsWith(item.href)) ??
+    navItems[0];
+  const pageTitle = activeNavItem ? t(activeNavItem.labelKey.replace("app.", "")) : t("main");
+  const signOut = () =>
+    void authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => router.replace("/login")
+      }
+    });
 
   return (
     <main className="app-shell">
@@ -115,24 +135,33 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
           <IconButton className="mobile-menu" label="Open navigation" onClick={() => setNavOpen(true)}>
             <Menu size={18} aria-hidden />
           </IconButton>
-          <div>
-            <strong>{actor.fullName}</strong>
-            <span dir="ltr">{actor.email}</span>
-          </div>
-          <LocaleDensityControls locale={locale} density={density} />
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() =>
-              void authClient.signOut({
-                fetchOptions: {
-                  onSuccess: () => router.replace("/login")
-                }
-              })
-            }
-          >
-            {t("signOut")}
-          </Button>
+          <h1 className="shell-page-title">{pageTitle}</h1>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="shell-profile-trigger" type="button" aria-label={`${actor.fullName} profile menu`}>
+                <Avatar className="profile-avatar">
+                  <AvatarFallback>{getInitials(actor.fullName)}</AvatarFallback>
+                </Avatar>
+                <span>{actor.fullName}</span>
+                <ChevronDown size={16} aria-hidden />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>
+                <span>{actor.fullName}</span>
+                <span dir="ltr">{actor.email}</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="profile-menu-locale">
+                <LocaleControls locale={locale} />
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={signOut}>
+                <LogOut size={16} aria-hidden />
+                <span>{t("signOut")}</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
         <div className="app-content">{children}</div>
       </section>
@@ -141,4 +170,13 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
       </Drawer>
     </main>
   );
+}
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 }

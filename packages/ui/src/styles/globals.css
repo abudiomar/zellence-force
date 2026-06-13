@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@source "../../../../apps/web/src";
+@source "../";
+
+:root {
+  color-scheme: light;
+  --background: 210 25% 97%;
+  --foreground: 217 29% 13%;
+  --card: 0 0% 100%;
+  --card-foreground: 217 29% 13%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 217 29% 13%;
+  --primary: 176 72% 28%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 20% 94%;
+  --secondary-foreground: 217 29% 13%;
+  --muted: 210 18% 92%;
+  --muted-foreground: 215 14% 42%;
+  --accent: 176 50% 92%;
+  --accent-foreground: 176 72% 24%;
+  --destructive: 4 74% 44%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 24% 86%;
+  --input: 214 24% 86%;
+  --ring: 176 72% 36%;
+  --radius: 8px;
+  --sidebar-background: 218 39% 11%;
+  --sidebar-foreground: 210 22% 91%;
+  --sidebar-muted: 217 24% 23%;
+  --sidebar-accent: 176 68% 40%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 217 30% 18%;
+  --status-info: 221 83% 53%;
+  --status-success: 142 71% 34%;
+  --status-warning: 38 92% 42%;
+  --status-review: 262 83% 58%;
+  --status-locked: 215 14% 42%;
+  --zf-color-background: hsl(var(--background));
+  --zf-color-surface: hsl(var(--card));
+  --zf-color-surface-muted: hsl(var(--muted));
+  --zf-color-text: hsl(var(--foreground));
+  --zf-color-text-muted: hsl(var(--muted-foreground));
+  --zf-color-border: hsl(var(--border));
+  --zf-color-primary: hsl(var(--primary));
+  --zf-color-primary-text: hsl(var(--primary-foreground));
+  --zf-color-info: hsl(var(--status-info));
+  --zf-color-success: hsl(var(--status-success));
+  --zf-color-warning: hsl(var(--status-warning));
+  --zf-color-danger: hsl(var(--destructive));
+  --zf-color-review: hsl(var(--status-review));
+  --zf-color-locked: hsl(var(--status-locked));
+  --zf-color-focus: hsl(var(--ring));
+  --zf-radius-sm: 6px;
+  --zf-radius-md: 8px;
+  --zf-space-1: 4px;
+  --zf-space-2: 8px;
+  --zf-space-3: 12px;
+  --zf-space-4: 16px;
+  --zf-space-5: 20px;
+  --zf-space-6: 24px;
+  --zf-space-8: 32px;
+  --zf-font-body: "IBM Plex Sans Arabic", "IBM Plex Sans", system-ui, sans-serif;
+  --zf-font-size-body: 15px;
+  --zf-font-size-small: 13px;
+  --zf-font-size-title: 22px;
+  --zf-line-height: 1.5;
+  --zf-control-height: 40px;
+  --zf-row-height: 48px;
+  --zf-touch-target: 48px;
+  --zf-sidebar-width: 272px;
+  --zf-topbar-height: 64px;
+  --zf-shadow-overlay: 0 24px 60px rgb(15 23 42 / 18%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.zf-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes zf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

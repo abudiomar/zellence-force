@@ -184,7 +184,7 @@ API/Worker -> logs/monitoring
 | Object storage | Private S3-compatible storage, KSA region where available |
 | Auth | Better Auth server-side sessions, email/password login, strong password hashing |
 | Validation | Shared schemas, e.g. Zod |
-| Testing | Vitest/Jest, integration tests, Playwright |
+| Testing | Vitest/Jest, integration tests, manual frontend QA |
 | Deployment | Dockerized web/API/worker in KSA-region hosting |
 
 ### 7.2 Supported Devices and Browsers

@@ -1,7 +1,9 @@
 import React from "react";
 import { getTranslations } from "next-intl/server";
-import { PageHeader, StatusBadge, Toolbar, Button } from "@zellforce/ui";
+import { Button } from "@zellforce/ui/components/button";
+import { StatusBadge } from "@zellforce/ui/components/badge";
 import { ProtectedShell } from "../../../components/protected-shell";
+import { SettingsTabs } from "../settings-tabs";
 import { UsersTable } from "./users-table";
 
 export default async function UsersSettingsPage() {
@@ -9,15 +11,13 @@ export default async function UsersSettingsPage() {
 
   return (
     <ProtectedShell>
-      <section className="content-band" aria-labelledby="users-title">
-        <PageHeader
-          title={t("internalUsers")}
-          actions={<Button type="button" variant="secondary" disabled>{t("save")}</Button>}
-        />
-        <Toolbar>
+      <section className="content-band">
+        <SettingsTabs />
+        <div className="toolbar">
           <span>{t("status")}</span>
           <StatusBadge tone="success" label="active" />
-        </Toolbar>
+          <Button type="button" variant="secondary" disabled>{t("save")}</Button>
+        </div>
         <UsersTable />
       </section>
     </ProtectedShell>

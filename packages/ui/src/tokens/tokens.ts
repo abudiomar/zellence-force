@@ -1,4 +1,4 @@
-export const UI_DENSITIES = ["comfortable", "compact"] as const;
+export const UI_DENSITIES = ["comfortable"] as const;
 export type UiDensity = (typeof UI_DENSITIES)[number];
 
 export const UI_STATUS_TONES = [
@@ -14,24 +14,24 @@ export type StatusTone = (typeof UI_STATUS_TONES)[number];
 
 export const UI_TOKENS = {
   color: {
-    background: "#f6f7f8",
+    background: "#f7f9fb",
     surface: "#ffffff",
-    surfaceMuted: "#edf2f4",
-    text: "#172026",
-    textMuted: "#5b6570",
-    border: "#d6dde2",
-    primary: "#0f766e",
+    surfaceMuted: "#eef3f5",
+    text: "#18212f",
+    textMuted: "#64748b",
+    border: "#d9e1e7",
+    primary: "#147c75",
     primaryText: "#ffffff",
     info: "#2563eb",
     success: "#16803c",
-    warning: "#b7791f",
+    warning: "#b7791b",
     danger: "#b42318",
     review: "#7c3aed",
     locked: "#6b7280",
     focus: "#0ea5a3"
   },
   radius: {
-    sm: "4px",
+    sm: "6px",
     md: "8px"
   },
   spacing: {
@@ -44,18 +44,16 @@ export const UI_TOKENS = {
     8: "32px"
   },
   typography: {
-    body: "16px",
-    small: "14px",
-    title: "24px",
+    body: "15px",
+    small: "13px",
+    title: "22px",
     line: "1.5"
   },
   size: {
-    controlComfortable: "44px",
-    controlCompact: "36px",
+    controlComfortable: "40px",
     touch: "48px",
-    sidebar: "280px",
+    sidebar: "272px",
     topbar: "64px",
-    rowComfortable: "52px",
-    rowCompact: "42px"
+    rowComfortable: "48px"
   }
 } as const;

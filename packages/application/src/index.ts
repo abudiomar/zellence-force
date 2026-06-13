@@ -1,9 +1,20 @@
 import {
+  APPLICANT_DECISION_INPUT_SCHEMA,
+  RECORD_INTERVIEW_SCORE_INPUT_SCHEMA,
+  RUN_APPLICANT_IMPORT_INPUT_SCHEMA,
+  SCHEDULE_INTERVIEW_INPUT_SCHEMA,
   CREATE_INTERNAL_USER_INPUT_SCHEMA,
   TENANT_SETTINGS_SCHEMA,
   UPDATE_TENANT_SETTINGS_INPUT_SCHEMA,
+  type ApplicantDecisionInput,
+  type ApplicantImportMappedData,
+  type ApplicantImportResult,
+  type ApplicantReviewQueueItem,
   type AuthenticatedUser,
   type CreateInternalUserInput,
+  type RecordInterviewScoreInput,
+  type RunApplicantImportInput,
+  type ScheduleInterviewInput,
   type TenantSettings,
   type UpdateTenantSettingsInput
 } from "@zellforce/contracts";
@@ -13,6 +24,7 @@ import {
   type Permission,
   type PermissionDecision
 } from "@zellforce/domain";
+import { createHash } from "node:crypto";
 
 export type RequestActor = AuthenticatedUser;
 
@@ -86,6 +98,101 @@ export interface BootstrapRepository {
   findTenantIdBySlug(slug: string): Promise<string | null>;
   countUsers(tenantId: string): Promise<number>;
   ensureTenantSettings(tenantId: string): Promise<void>;
+}
+
+export type ApplicantSheetRow = {
+  rowId: string;
+  values: Record<string, unknown>;
+};
+
+export interface ApplicantSheetReader {
+  readRows(input: {
+    sourceId: string;
+    sourceRange: string;
+  }): Promise<ApplicantSheetRow[]>;
+}
+
+export type ApplicantImportRowWrite = {
+  tenantId: string;
+  importRunId: string;
+  sourceId: string;
+  sourceRange: string;
+  sourceRowId: string;
+  sourceHash: string;
+  rawData: Record<string, unknown>;
+  mappedData: ApplicantImportMappedData | null;
+  status: "pending_review" | "error";
+  errorMessages: string[];
+  matchedPersonId: string | null;
+};
+
+export interface ApplicantImportRepository {
+  createImportRun(input: {
+    tenantId: string;
+    sourceId: string;
+    sourceRange: string;
+    startedByUserId: string;
+  }): Promise<string>;
+  upsertImportRow(input: ApplicantImportRowWrite): Promise<{ id: string } & ApplicantImportRowWrite>;
+  finishImportRun(input: {
+    tenantId: string;
+    importRunId: string;
+    rowsSeen: number;
+    rowsImported: number;
+    rowsFailed: number;
+    status: "completed" | "failed" | "partial";
+    errorSummary?: string;
+  }): Promise<void>;
+  findExistingPersonByPhone(tenantId: string, phone: string): Promise<string | null>;
+  listReviewQueue(input: {
+    tenantId: string;
+    status?: string;
+  }): Promise<ApplicantReviewQueueItem[]>;
+  findImportRow(tenantId: string, rowId: string): Promise<ApplicantReviewQueueItem | null>;
+  createPersonFromApplicant(input: {
+    tenantId: string;
+    actorUserId: string;
+    rowId: string;
+  }): Promise<string>;
+  mergeApplicantIntoPerson(input: {
+    tenantId: string;
+    actorUserId: string;
+    rowId: string;
+    targetPersonId: string;
+  }): Promise<string>;
+  updateImportRowDecision(input: {
+    tenantId: string;
+    actorUserId: string;
+    rowId: string;
+    status: "accepted" | "merged" | "rejected" | "deferred";
+    personId: string | null;
+    notes?: string;
+  }): Promise<void>;
+  scheduleInterview(input: {
+    tenantId: string;
+    actorUserId: string;
+    personId: string;
+    eventId?: string;
+    interviewerUserId?: string;
+    scheduledAt: string;
+    notes?: string;
+  }): Promise<string>;
+  recordInterviewScore(input: {
+    tenantId: string;
+    actorUserId: string;
+    interviewId: string;
+    scores: Array<{ criterion: string; score: number }>;
+    notes?: string;
+    minimumScore?: number;
+  }): Promise<{ interviewId: string; overallScore: number; belowMinimum: boolean }>;
+  writeAudit(input: {
+    tenantId: string;
+    actorUserId: string;
+    action: string;
+    entityId: string;
+    before: unknown;
+    after: unknown;
+  }): Promise<void>;
 }
 
 export function authorize(actor: RequestActor, permission: Permission): PermissionDecision {
@@ -219,6 +326,215 @@ export async function updateTenantSettings(
     after: updated
   });
   return updated;
+}
+
+export async function importApplicantRows(
+  deps: { applicants: ApplicantImportRepository; sheet: ApplicantSheetReader },
+  actor: RequestActor,
+  rawInput: RunApplicantImportInput
+): Promise<ApplicantImportResult> {
+  authorize(actor, PERMISSIONS.MANAGE_APPLICANT_IMPORT);
+  const input = RUN_APPLICANT_IMPORT_INPUT_SCHEMA.parse(rawInput);
+  const importRunId = await deps.applicants.createImportRun({
+    tenantId: actor.tenantId,
+    sourceId: input.sourceId,
+    sourceRange: input.sourceRange,
+    startedByUserId: actor.id
+  });
+
+  let rows: ApplicantSheetRow[];
+  try {
+    rows = await deps.sheet.readRows({
+      sourceId: input.sourceId,
+      sourceRange: input.sourceRange
+    });
+  } catch (error) {
+    await deps.applicants.finishImportRun({
+      tenantId: actor.tenantId,
+      importRunId,
+      rowsSeen: 0,
+      rowsImported: 0,
+      rowsFailed: 0,
+      status: "failed",
+      errorSummary: error instanceof Error ? error.message : "Sheet read failed"
+    });
+    throw new ApplicationError("APPLICANT_IMPORT_FAILED", "Applicant import failed", 502);
+  }
+
+  let rowsImported = 0;
+  let rowsFailed = 0;
+  for (const row of rows) {
+    const mapped = mapApplicantRow(row.values, input.mapping);
+    const validation = validateApplicantMapping(mapped);
+    const status = validation.length === 0 ? "pending_review" : "error";
+    if (status === "pending_review") rowsImported += 1;
+    else rowsFailed += 1;
+    const matchedPersonId =
+      mapped.phone && validation.length === 0
+        ? await deps.applicants.findExistingPersonByPhone(actor.tenantId, mapped.phone)
+        : null;
+
+    await deps.applicants.upsertImportRow({
+      tenantId: actor.tenantId,
+      importRunId,
+      sourceId: input.sourceId,
+      sourceRange: input.sourceRange,
+      sourceRowId: row.rowId,
+      sourceHash: createApplicantSourceHash(input.sourceId, row.rowId, mapped),
+      rawData: row.values,
+      mappedData: validation.length === 0 ? mapped : null,
+      status,
+      errorMessages: validation,
+      matchedPersonId
+    });
+  }
+
+  const status = rowsFailed === 0 ? "completed" : rowsImported === 0 ? "failed" : "partial";
+  const result = {
+    importRunId,
+    rowsSeen: rows.length,
+    rowsImported,
+    rowsFailed,
+    status
+  } as const;
+  await deps.applicants.finishImportRun({
+    tenantId: actor.tenantId,
+    ...result
+  });
+  return result;
+}
+
+export async function listApplicantReviewQueue(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor,
+  filter: { status?: string }
+): Promise<ApplicantReviewQueueItem[]> {
+  authorize(actor, PERMISSIONS.MANAGE_APPLICANT_IMPORT);
+  return deps.applicants.listReviewQueue({
+    tenantId: actor.tenantId,
+    ...(filter.status ? { status: filter.status } : {})
+  });
+}
+
+export async function decideApplicantImportRow(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor,
+  rowId: string,
+  rawInput: ApplicantDecisionInput
+): Promise<{ personId: string | null; status: "accepted" | "merged" | "rejected" | "deferred" }> {
+  authorize(actor, PERMISSIONS.MANAGE_APPLICANT_IMPORT);
+  const input = APPLICANT_DECISION_INPUT_SCHEMA.parse(rawInput);
+  const current = await deps.applicants.findImportRow(actor.tenantId, rowId);
+  if (!current) {
+    throw new ApplicationError("APPLICANT_ROW_NOT_FOUND", "Applicant row not found", 404);
+  }
+
+  let personId: string | null = null;
+  let status: "accepted" | "merged" | "rejected" | "deferred";
+  if (input.decision === "accept") {
+    personId = await deps.applicants.createPersonFromApplicant({
+      tenantId: actor.tenantId,
+      actorUserId: actor.id,
+      rowId
+    });
+    status = "accepted";
+  } else if (input.decision === "merge") {
+    personId = await deps.applicants.mergeApplicantIntoPerson({
+      tenantId: actor.tenantId,
+      actorUserId: actor.id,
+      rowId,
+      targetPersonId: input.targetPersonId
+    });
+    status = "merged";
+  } else {
+    status = input.decision === "reject" ? "rejected" : "deferred";
+  }
+
+  await deps.applicants.updateImportRowDecision({
+    tenantId: actor.tenantId,
+    actorUserId: actor.id,
+    rowId,
+    status,
+    personId,
+    ...("notes" in input && input.notes ? { notes: input.notes } : {})
+  });
+  await deps.applicants.writeAudit({
+    tenantId: actor.tenantId,
+    actorUserId: actor.id,
+    action: `applicant.${status}`,
+    entityId: rowId,
+    before: current,
+    after: { personId, status }
+  });
+  return { personId, status };
+}
+
+export async function scheduleInterview(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor,
+  rawInput: ScheduleInterviewInput
+): Promise<{ interviewId: string }> {
+  authorize(actor, PERMISSIONS.MANAGE_PEOPLE);
+  const input = SCHEDULE_INTERVIEW_INPUT_SCHEMA.parse(rawInput);
+  const interviewId = await deps.applicants.scheduleInterview({
+    tenantId: actor.tenantId,
+    actorUserId: actor.id,
+    personId: input.personId,
+    scheduledAt: input.scheduledAt,
+    ...(input.eventId ? { eventId: input.eventId } : {}),
+    ...(input.interviewerUserId ? { interviewerUserId: input.interviewerUserId } : {}),
+    ...(input.notes ? { notes: input.notes } : {})
+  });
+  return { interviewId };
+}
+
+export async function recordInterviewScore(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor,
+  rawInput: RecordInterviewScoreInput
+): Promise<{ interviewId: string; overallScore: number; belowMinimum: boolean }> {
+  authorize(actor, PERMISSIONS.MANAGE_PEOPLE);
+  const input = RECORD_INTERVIEW_SCORE_INPUT_SCHEMA.parse(rawInput);
+  return deps.applicants.recordInterviewScore({
+    tenantId: actor.tenantId,
+    actorUserId: actor.id,
+    interviewId: input.interviewId,
+    scores: input.scores,
+    ...(input.notes ? { notes: input.notes } : {}),
+    ...(input.minimumScore !== undefined ? { minimumScore: input.minimumScore } : {})
+  });
+}
+
+function mapApplicantRow(
+  raw: Record<string, unknown>,
+  mapping: RunApplicantImportInput["mapping"]
+): ApplicantImportMappedData {
+  const mapped: Record<string, string> = {};
+  for (const [field, column] of Object.entries(mapping)) {
+    if (!column) continue;
+    const value = raw[column];
+    if (value !== undefined && value !== null) {
+      mapped[field] = String(value).trim();
+    }
+  }
+  return mapped as ApplicantImportMappedData;
+}
+
+function validateApplicantMapping(mapped: Partial<ApplicantImportMappedData>): string[] {
+  const errors: string[] = [];
+  if (!mapped.fullName?.trim()) errors.push("fullName is required");
+  if (!mapped.phone?.trim()) errors.push("phone is required");
+  return errors;
+}
+
+function createApplicantSourceHash(
+  sourceId: string,
+  sourceRowId: string,
+  mapped: ApplicantImportMappedData
+): string {
+  return createHash("sha256")
+    .update(JSON.stringify({ sourceId, sourceRowId, mapped }))
+    .digest("hex");
 }
 
 export async function bootstrapOwner(

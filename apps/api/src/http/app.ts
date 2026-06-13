@@ -10,6 +10,8 @@ import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import {
   ApplicationError,
   resolveRequestActor,
+  type ApplicantImportRepository,
+  type ApplicantSheetReader,
   type IdentityAdmin,
   type RequestActor,
   type SessionRevoker,
@@ -39,6 +41,10 @@ export type CreateExpressAppOptions = {
     identity: IdentityAdmin;
     sessions: SessionRevoker;
   };
+  phaseFour?: {
+    applicants: ApplicantImportRepository;
+    sheet: ApplicantSheetReader;
+  };
 };
 
 export function createExpressApp(options: CreateExpressAppOptions = {}): Express {
@@ -63,7 +69,8 @@ export function createExpressApp(options: CreateExpressAppOptions = {}): Express
   const sessionReader = options.sessionReader ?? options.auth;
   const routeOptions = {
     requireActor: createRequireActor(sessionReader, options.phaseTwo?.users),
-    ...(options.phaseTwo ? { phaseTwo: options.phaseTwo } : {})
+    ...(options.phaseTwo ? { phaseTwo: options.phaseTwo } : {}),
+    ...(options.phaseFour ? { phaseFour: options.phaseFour } : {})
   };
   registerRoutes(app, routeOptions);
 

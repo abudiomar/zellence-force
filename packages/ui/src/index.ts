@@ -1,2 +1,2 @@
 export * from "./tokens/tokens";
-export * from "./components";
+export * from "./lib/utils";

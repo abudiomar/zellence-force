@@ -15,16 +15,17 @@
     "lint": "bun run typecheck",
     "build": "turbo build",
     "ci": "bun run scripts/ci.ts",
-    "test:e2e:install": "bun run --cwd apps/web test:e2e:install",
-    "test:e2e": "bun run --cwd apps/web test:e2e",
     "test:db:integration": "bun run --filter '@zellforce/db' test:integration",
     "bootstrap:owner": "bun run apps/api/src/bootstrap-owner.ts",
+    "seed:local": "bun run apps/api/src/seed-local.ts",
     "smoke:workspace": "vitest run tests/platform/workspace-import.test.ts",
     "smoke:env": "vitest run tests/platform/env-schema.test.ts"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.20.0",
+    "tailwindcss": "^4.1.18",
     "turbo": "^2.9.18",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"

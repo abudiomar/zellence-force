@@ -1,4 +1,4 @@
-import { Home, Settings, Users, type LucideIcon } from "lucide-react";
+import { Home, Settings, UserSearch, type LucideIcon } from "lucide-react";
 import {
   PERMISSIONS,
   canRole,
@@ -24,11 +24,11 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
     enabled: true
   },
   {
-    id: "users",
-    href: "/settings/users",
-    labelKey: "app.users",
-    icon: Users,
-    requiredPermission: PERMISSIONS.MANAGE_USERS,
+    id: "applicants",
+    href: "/recruitment/applicants",
+    labelKey: "app.applicants",
+    icon: UserSearch,
+    requiredPermission: PERMISSIONS.MANAGE_APPLICANT_IMPORT,
     enabled: true
   },
   {

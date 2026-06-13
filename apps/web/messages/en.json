@@ -18,6 +18,7 @@
     "main": "Operations",
     "users": "Users",
     "settings": "Settings",
+    "applicants": "Applicant review",
     "tenantSettings": "Tenant settings",
     "internalUsers": "Internal users",
     "save": "Save",

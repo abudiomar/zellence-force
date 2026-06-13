@@ -7,7 +7,6 @@ import {
 
 export type AppLocale = SupportedLanguage;
 export const LOCALE_COOKIE = "zf_locale";
-export const DENSITY_COOKIE = "zf_density";
 export const DEFAULT_LOCALE: AppLocale = DEFAULT_LANGUAGE;
 
 export function getLocaleFromCookieValue(value: string | undefined): AppLocale {

@@ -11,7 +11,7 @@ export default defineConfig({
       "packages/**/*.test.ts",
       "packages/**/*.test.tsx"
     ],
-    setupFiles: ["./apps/web/src/test/setup.ts"],
+    setupFiles: ["./packages/ui/test/setup.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"]

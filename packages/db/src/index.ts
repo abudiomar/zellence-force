@@ -42,6 +42,10 @@ const migrations = [
   {
     version: "0002_better_auth",
     fileName: "0002_better_auth.sql"
+  },
+  {
+    version: "0003_applicant_intake",
+    fileName: "0003_applicant_intake.sql"
   }
 ] as const;
 

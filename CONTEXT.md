@@ -73,16 +73,19 @@ These are expected to become deep Modules with small Interfaces and strong tests
 - `bun run typecheck` runs TypeScript project references.
 - `bun run build` runs package build checks across the workspace.
 - `bun run ci` runs the local CI-equivalent gate: typecheck, lint, test, build.
-- `bun run test:e2e` runs Playwright browser checks for the Next.js web app.
+- Frontend screen acceptance uses manual QA in `docs/QA.md`; automated tests cover backend/domain/contracts/config/platform/package UI primitives and selected non-rendering web logic.
 - `bun run dev` starts Next.js and Express development processes through Turborepo; copy `.env.example` to `.env` first.
 - `bun run test:db:integration` runs Docker/Postgres-backed DB integration and requires `TEST_DATABASE_URL`.
 - Local Docker test DB convention: container `zellforce-postgres-test`, port `54329`, URL `postgres://zellforce:zellforce_test@localhost:54329/zellforce_test`.
 - Runtime stack decision: Next.js + React web app and Express.js TypeScript API.
 - Auth library decision: Better Auth for internal user email/password sessions on Express API.
-- UI foundation decision: Arabic is default, `next-intl` runs without locale URL prefixes, locale persists in `zf_locale`, and density persists in `zf_density`.
+- UI foundation decision: Arabic is default, `next-intl` runs without locale URL prefixes, locale persists in `zf_locale`, and density is fixed to comfortable for MVP.
 - `packages/ui` owns reusable design tokens and React primitives; `apps/web` owns locale loading, route composition, auth state, navigation registry, API data, and status-to-visual mapping.
 - Better Auth owns identity, password hashes, cookies, and sessions using default `"user"`, `session`, `account`, and `verification` tables.
 - Zell-force `users` owns tenant, role, active state, and optional Person link through `auth_user_id`.
+- Applicant import uses `ApplicantSheetReader` for Google Sheet reads, `ApplicantImportRepository` for staging/review persistence, and applicant Actions for permission checks, validation outcomes, review decisions, and audit writes.
+- `/recruitment/applicants` is the Phase 4 applicant review route; it can run a Google Sheet sync, show invalid/duplicate rows, accept/create Person, merge/reject/defer, schedule interview, and record score. It uses shared table/form primitives and does not replace the Google Form source.
+- Google Sheets runtime auth uses service-account env vars `GOOGLE_CLIENT_EMAIL` and `GOOGLE_PRIVATE_KEY`; sheet ID/range are supplied to the import Action request until tenant-level source settings are confirmed.
 - `bun run bootstrap:owner --tenant-slug=... --full-name=... --email=... --password=...` creates first Owner for an empty tenant.
 - `bun run smoke:workspace` verifies workspace public Interface imports.
 - `bun run smoke:env` verifies runtime env schema failure behavior.

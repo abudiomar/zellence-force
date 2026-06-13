@@ -52,6 +52,6 @@ Implemented primitive Interfaces:
 
 - `bun run test packages/ui`
 - `bun run test apps/web`
-- `bun run test:e2e`
 - `bun run typecheck`
 - `bun run build`
+- Manual frontend screen checks follow `docs/QA.md`; this supersedes earlier Playwright verification.

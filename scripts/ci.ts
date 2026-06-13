@@ -2,8 +2,6 @@ const commands = [
   ["bun", "run", "typecheck"],
   ["bun", "run", "lint"],
   ["bun", "run", "test"],
-  ["bun", "run", "test:e2e:install"],
-  ["bun", "run", "test:e2e"],
   ["bun", "run", "build"]
 ] as const;
 

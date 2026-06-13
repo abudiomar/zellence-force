@@ -4,14 +4,16 @@ import type { RuntimeEnvInput } from "@zellforce/config";
 import { createAuth, createIdentityProvisioner } from "./auth/auth";
 import { createIdentityAdmin } from "./auth/identity-admin";
 import {
+  createPgApplicantImportRepository,
   createPgSettingsRepository,
   createPgUserRepository,
   createSessionRevoker
 } from "./adapters/postgres";
-import { loadApiEnv } from "./config/runtime-env";
+import { createGoogleSheetsApplicantAdapter } from "./adapters/google-sheets";
+import { loadApiServerEnv } from "./config/runtime-env";
 import { createExpressApp } from "./http/app";
 
-const env = loadApiEnv(process.env as RuntimeEnvInput);
+const env = loadApiServerEnv(process.env as RuntimeEnvInput);
 const pool = createPgPool({
   connectionString: env.DATABASE_URL,
   ssl: env.DB_SSL_MODE === "require" ? { rejectUnauthorized: true } : undefined
@@ -19,6 +21,15 @@ const pool = createPgPool({
 
 const auth = createAuth({ pool, env });
 const identityProvisioner = createIdentityProvisioner({ pool, env });
+const googleServiceAccount =
+  env.GOOGLE_CLIENT_EMAIL && env.GOOGLE_PRIVATE_KEY
+    ? {
+        serviceAccount: {
+          clientEmail: env.GOOGLE_CLIENT_EMAIL,
+          privateKey: env.GOOGLE_PRIVATE_KEY
+        }
+      }
+    : {};
 const app = createExpressApp({
   auth,
   corsOrigin: env.CORS_ORIGIN ?? env.APP_URL,
@@ -27,6 +38,10 @@ const app = createExpressApp({
     settings: createPgSettingsRepository(pool),
     identity: createIdentityAdmin(identityProvisioner, pool),
     sessions: createSessionRevoker(pool)
+  },
+  phaseFour: {
+    applicants: createPgApplicantImportRepository(pool),
+    sheet: createGoogleSheetsApplicantAdapter(googleServiceAccount)
   }
 });
 

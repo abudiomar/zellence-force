@@ -50,7 +50,7 @@ It covers:
 | Area | Known |
 |---|---|
 | Stack | TypeScript, Next.js + React, Express API, PostgreSQL, Kysely + SQL migrations, Bun workspaces, pg-boss, private object storage recommendation |
-| Test architecture | Unit tests, action tests, integration tests, E2E tests, accessibility tests |
+| Test architecture | Automated backend/domain/contract/config/platform tests, reusable UI primitive tests, selected non-rendering web logic tests, and manual frontend QA |
 | Mandatory methodology | TDD, Deep Modules, Actions vs Modules separation, DRY configuration truth |
 | Critical Modules | Applicant Intake Import, Staff Filtering, Assignment Pipeline, Budget Engine, Attendance Capture, Payment Calculator, WhatsApp Messaging, Contract Ingestion, Report Export, Audit Log |
 | Critical MVP workflows | applicant import, staff filtering, event setup, assignment, WhatsApp/token response, contracts, attendance, payment, reports, audit |
@@ -79,7 +79,7 @@ It covers:
 
 | ID | Assumption | Reason |
 |---|---|---|
-| TQA-ASM-001 | Automated tests use Bun commands, with Vitest/Jest for unit/action/integration and Playwright for E2E. | Architecture and Phase 10 set Bun and Vitest/Jest + Playwright direction. |
+| TQA-ASM-001 | Automated tests use Bun commands for backend/domain/contracts/config/platform/package UI primitive and selected non-rendering web logic coverage. Frontend screens use manual QA in `docs/QA.md`. | Current testing policy replaces Playwright E2E with manual frontend acceptance. |
 | TQA-ASM-002 | MVP testing is online-first for Supervisor attendance. | Offline attendance is open issue, not approved MVP requirement. |
 | TQA-ASM-003 | Test data includes at least 10,000 staff records for filter performance checks. | NFR-001 and SRS-NFR-001 define target. |
 | TQA-ASM-004 | Payment calculator has pure Module test fixtures independent of UI/API. | Architecture requires Payment Calculator as deep Module. |
@@ -101,7 +101,7 @@ Highest-risk areas get deepest automated coverage:
 6. Contract ingestion and private file storage.
 7. Budget/money precision.
 8. Report/export permission gating.
-9. Arabic RTL, responsive behavior, and accessibility on critical screens.
+9. Arabic RTL, responsive behavior, and accessibility on critical screens through manual QA.
 
 Testing follows the project TDD rule:
 
@@ -121,8 +121,8 @@ No feature is complete if its new behavior lacks a failing test observed before 
 | Action tests | Validate auth, role checks, workflow state changes, user-facing errors | Coding agent / developer | Action-level tests with role and state fixtures |
 | Integration tests | Validate DB queries, migrations, transactions, external Adapter contracts | Coding agent / developer | Test DB run, rollback tests, adapter fake/provider contract tests |
 | API tests | Validate request/response, auth cookies/sessions, server-side permission denial | Coding agent / developer | API test output and error shape checks |
-| Component tests | Validate reusable UI behavior and accessibility basics | Frontend agent / developer | Render, state, keyboard, RTL tests |
-| E2E tests | Validate core user journeys across UI/API/DB | QA / coding agent | Playwright run with screenshots/traces where useful |
+| Reusable UI package tests | Validate `packages/ui` primitive behavior and accessibility basics | Coding agent / developer | Vitest/jsdom coverage for package UI Interfaces |
+| Manual frontend QA | Validate screen rendering, critical user journeys, responsive behavior, RTL, and accessibility checks | User / QA / coding agent support | `docs/QA.md` checklist, screenshots or user confirmation |
 | Performance tests | Validate defined NFR thresholds | QA / coding agent | Seed data size, command output, threshold result |
 | Security tests | Validate auth, RBAC, tenant, token, file access, secrets/log safety | QA / security reviewer | Security checklist and automated regression tests |
 | UAT | Validate business acceptance with client/business owner | Product owner / client / QA | Signed UAT checklist |
@@ -141,9 +141,9 @@ No feature is complete if its new behavior lacks a failing test observed before 
 | Idempotency | Yes | repeated import sync, duplicate WhatsApp webhook |
 | Transaction | Yes | payment approval, attendance write + audit |
 | Performance | Yes | staff filtering, payment calculation, export |
-| Accessibility | Yes | keyboard, focus, labels, contrast, dialog focus |
-| RTL/localization | Yes | Arabic layout, LTR mixed content, SAR/date formatting |
-| Responsive | Yes | desktop admin, mobile supervisor, worker token pages |
+| Accessibility | Yes, manual for screens; automated for reusable UI primitives | keyboard, focus, labels, contrast, dialog focus |
+| RTL/localization | Yes, manual for screens; automated for non-rendering locale logic | Arabic layout, LTR mixed content, SAR/date formatting |
+| Responsive | Yes, manual | desktop admin, mobile supervisor, worker token pages |
 | Security/privacy | Yes | token links, signed URLs, sensitive logs |
 | Regression | Yes | Every fixed bug gets a failing regression test first |
 | Smoke | Yes | post-deploy login, import, event, attendance, payment |
@@ -168,11 +168,10 @@ bun run lint
 bun run typecheck
 bun run test
 bun run test:integration
-bun run test:e2e
 bun run build
 ```
 
-Exact scripts are TBD until repo implementation creates package scripts.
+Frontend screen acceptance follows `docs/QA.md` instead of Playwright.
 
 ---
 
@@ -228,10 +227,10 @@ Source refs: FR-001 to FR-004, UC-029, NFR-019 to NFR-026.
 
 | Test ID | Scenario | Type | Priority | Expected result |
 |---|---|---|---|---|
-| TC-AUTH-001 | Valid internal user logs in | API/E2E | P0 | Session created, user lands on allowed dashboard |
+| TC-AUTH-001 | Valid internal user logs in | API/Manual QA | P0 | Session created, user lands on allowed dashboard |
 | TC-AUTH-002 | Invalid password rejected | API | P0 | Safe error, no session |
 | TC-AUTH-003 | Inactive user rejected | API | P0 | Safe error, no session |
-| TC-AUTH-004 | Logout invalidates session | API/E2E | P1 | Protected pages require login after logout |
+| TC-AUTH-004 | Logout invalidates session | API/Manual QA | P1 | Protected pages require login after logout |
 | TC-AUTH-005 | Owner/Admin creates user | Action/API | P0 | User created with role and tenant |
 | TC-AUTH-006 | Non-admin cannot create user | Action/API | P0 | Server-side denial |
 | TC-AUTH-007 | User linked to person record | Action/API | P1 | Link saved and visible to authorized users |
@@ -243,11 +242,11 @@ Source refs: FR-005 to FR-008, UC-029, NFR-020 to NFR-022, SRS technical accepta
 | Test ID | Scenario | Type | Priority | Expected result |
 |---|---|---|---|---|
 | TC-RBAC-001 | Role matrix allow/deny for all MVP roles | Unit/Action | P0 | Permission map matches docs/02 |
-| TC-RBAC-002 | Supervisor accesses only assigned event | Action/API/E2E | P0 | Assigned event allowed, unassigned denied |
-| TC-RBAC-003 | Finance sees payment data but not photos/CVs by default | API/E2E | P0 | Sensitive staff files hidden/denied |
-| TC-RBAC-004 | Viewer cannot mutate data | API/E2E | P0 | Mutating requests denied |
+| TC-RBAC-002 | Supervisor accesses only assigned event | Action/API/Manual QA | P0 | Assigned event allowed, unassigned denied |
+| TC-RBAC-003 | Finance sees payment data but not photos/CVs by default | API/Manual QA | P0 | Sensitive staff files hidden/denied |
+| TC-RBAC-004 | Viewer cannot mutate data | API/Manual QA | P0 | Mutating requests denied |
 | TC-RBAC-005 | Direct object ID from another tenant denied | Integration/API | P0 | 403/404 safe denial |
-| TC-RBAC-006 | UI hidden link is backed by server denial | API/E2E | P0 | Manual URL/API call still denied |
+| TC-RBAC-006 | UI hidden link is backed by server denial | API/Manual QA | P0 | Manual URL/API call still denied |
 
 ### 10.3 Applicant Import and Review
 
@@ -260,7 +259,7 @@ Source refs: UC-001 to UC-005, FR-009 to FR-013, FR-023 to FR-028, NFR-004, NFR-
 | TC-IMP-003 | Duplicate phone detected | Module/Action | P0 | Possible duplicate shown in review queue |
 | TC-IMP-004 | Repeated sync with same source hash | Module/Integration | P0 | No duplicate applicant rows |
 | TC-IMP-005 | Google Sheets Adapter failure | Adapter/Action | P1 | Failure logged, visible, retriable |
-| TC-IMP-006 | HR accepts applicant into person profile | Action/E2E | P0 | Person created/linked, row status updated |
+| TC-IMP-006 | HR accepts applicant into person profile | Action/Manual QA | P0 | Person created/linked, row status updated |
 | TC-IMP-007 | HR merges duplicate applicant | Action | P0 | Existing person updated, audit/log entry if required |
 | TC-IMP-008 | Interview score below event minimum | Action/UI | P1 | Warning or block per configured policy |
 
@@ -316,9 +315,9 @@ Source refs: UC-014, UC-015, UC-030, FR-044 to FR-048, NFR-012, NFR-023, NFR-046
 | TC-MSG-001 | Create/update WhatsApp template | Action/UI | P1 | Template variables validated |
 | TC-MSG-002 | Send event invitation | Action/Adapter | P0 | Message record created with provider ID/status |
 | TC-MSG-003 | Send blocked when consent missing | Action | P0 | Send blocked or flagged per policy |
-| TC-MSG-004 | Worker confirms through token page | E2E/API | P0 | Assignment stage updated |
-| TC-MSG-005 | Worker declines with reason | E2E/API | P0 | Stage/reason saved |
-| TC-MSG-006 | Expired/invalid token denied | Security/API/E2E | P0 | No worker/admin data leaked |
+| TC-MSG-004 | Worker confirms through token page | Manual QA/API | P0 | Assignment stage updated |
+| TC-MSG-005 | Worker declines with reason | Manual QA/API | P0 | Stage/reason saved |
+| TC-MSG-006 | Expired/invalid token denied | Security/API/Manual QA | P0 | No worker/admin data leaked |
 | TC-MSG-007 | Duplicate WhatsApp webhook | Module/API | P0 | Processed once only |
 | TC-MSG-008 | Message failure retried | Action/Job | P1 | Retry status and log updated |
 
@@ -342,8 +341,8 @@ Source refs: UC-019 to UC-022, FR-054 to FR-061, NFR-049.
 
 | Test ID | Scenario | Type | Priority | Expected result |
 |---|---|---|---|---|
-| TC-ATT-001 | Supervisor views assigned roster | Action/E2E | P0 | Assigned event roster visible |
-| TC-ATT-002 | Supervisor cannot view other event roster | Security/API/E2E | P0 | Denied server-side |
+| TC-ATT-001 | Supervisor views assigned roster | Action/Manual QA | P0 | Assigned event roster visible |
+| TC-ATT-002 | Supervisor cannot view other event roster | Security/API/Manual QA | P0 | Denied server-side |
 | TC-ATT-003 | Mark present/absent/excused | Module/Action/UI | P0 | Attendance saved |
 | TC-ATT-004 | Record late minutes | Module/Action/UI | P0 | Minutes saved and valid |
 | TC-ATT-005 | Invalid late minutes rejected | Module/UI | P0 | Validation error |
@@ -379,7 +378,7 @@ Source refs: UC-027 to UC-028, FR-072 to FR-077, FR-081 to FR-084, NFR-032 to NF
 
 | Test ID | Scenario | Type | Priority | Expected result |
 |---|---|---|---|---|
-| TC-RPT-001 | Owner dashboard shows payment approvals | E2E/UI | P1 | Urgent items reachable |
+| TC-RPT-001 | Owner dashboard shows payment approvals | Manual QA | P1 | Urgent items reachable |
 | TC-RPT-002 | Coordinator dashboard shows understaffed roles | UI/API | P1 | Underfilled roles visible |
 | TC-RPT-003 | Finance dashboard shows payment review queues | UI/API | P1 | Correct batches visible |
 | TC-RPT-004 | Roster report role-safe | Action/UI | P1 | Only allowed columns visible |
@@ -395,8 +394,8 @@ Source refs: FR-085 to FR-088, NFR-051 to NFR-054.
 
 | Test ID | Scenario | Type | Priority | Expected result |
 |---|---|---|---|---|
-| TC-I18N-001 | Arabic RTL default | UI/E2E | P0 | Layout direction RTL by default |
-| TC-I18N-002 | English fallback | UI/E2E | P1 | UI labels switch/fallback without broken text |
+| TC-I18N-001 | Arabic RTL default | Manual QA | P0 | Layout direction RTL by default |
+| TC-I18N-002 | English fallback | Manual QA | P1 | UI labels switch/fallback without broken text |
 | TC-I18N-003 | Mixed Arabic/English names | UI | P1 | Text direction and truncation usable |
 | TC-I18N-004 | SAR money formatting | Unit/UI | P1 | Amounts display consistently |
 | TC-I18N-005 | Asia/Riyadh time handling | Unit/Integration | P0 | Stored/displayed dates correct |
@@ -567,7 +566,7 @@ Required checks:
 
 Recommended tools:
 
-- automated axe checks in Playwright for critical pages;
+- manual accessibility checks for critical pages;
 - keyboard manual pass;
 - browser zoom pass;
 - mobile touch manual pass.

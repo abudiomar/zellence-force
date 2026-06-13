@@ -1,17 +1,23 @@
 import React from "react";
 import { getTranslations } from "next-intl/server";
-import { Button, Checkbox, Field, FormSection, PageHeader, Select, TextInput } from "@zellforce/ui";
+import { Button } from "@zellforce/ui/components/button";
+import { Checkbox } from "@zellforce/ui/components/checkbox";
+import { Field } from "@zellforce/ui/components/label";
+import { Select } from "@zellforce/ui/components/select";
+import { TextInput } from "@zellforce/ui/components/input";
 import { ProtectedShell } from "../../../components/protected-shell";
+import { SettingsTabs } from "../settings-tabs";
 
 export default async function GeneralSettingsPage() {
   const t = await getTranslations("app");
 
   return (
     <ProtectedShell>
-      <section className="content-band" aria-labelledby="settings-title">
-        <PageHeader title={t("tenantSettings")} />
+      <section className="content-band">
+        <SettingsTabs />
         <form className="settings-form">
-          <FormSection title={t("settings")}>
+          <section className="section-panel">
+            <h2>{t("settings")}</h2>
             <Field label={t("defaultLanguage")}>
               <Select defaultValue="ar">
                 <option value="ar">العربية</option>
@@ -29,7 +35,7 @@ export default async function GeneralSettingsPage() {
               <Checkbox defaultChecked />
             </label>
             <Button type="button" disabled>{t("save")}</Button>
-          </FormSection>
+          </section>
         </form>
       </section>
     </ProtectedShell>

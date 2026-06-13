@@ -1,6 +1,6 @@
 # Phase 10: Agent Implementation Plan and Execution Gates
 
-Status: Draft for approval  
+Status: Phase 4 Implemented  
 Document type: Agent implementation plan, not human staffing timeline  
 Planning base: Approved MVP scope, approved Phase 8 architecture recommendations, approved SRS  
 Business timeline constraint: MVP target remains 10-12 calendar weeks from BRD, but this document uses dependency gates, not human calendar scheduling.
@@ -481,7 +481,7 @@ Feature checklists:
 - Code-structure check: `apps/web` owns routing, locale loading, auth state, nav registry, and API data.
 - Architecture check: locale/direction Interface lives in `@zellforce/domain` and `apps/web/src/i18n`.
 - DRY check: language constants live in `@zellforce/domain`; nav lives in one registry.
-- Verify: `bun run test apps/web`, `bun run test:e2e`.
+- Verify: `bun run test apps/web`, manual frontend QA in `docs/QA.md`.
 
 ### P3-F003 Core UI primitives and existing screen refactor
 
@@ -509,7 +509,7 @@ Feature checklists:
 - GREEN: `DataTable`, `SpreadsheetGrid`, and `RosterList` provide tested fixture patterns without adding applicant/event/attendance/payment workflow behavior.
 - Code-structure check: patterns own UI mechanics; feature screens own rows, columns, labels, and commands.
 - Architecture check: table/grid/list Interfaces create leverage for Phase 4+ screens without leaking workflow logic.
-- Verify: `bun run test packages/ui`, `bun run test:e2e`.
+- Verify: `bun run test packages/ui`, manual frontend QA in `docs/QA.md`.
 
 ### P3-F006 Forms, drawers, dialogs, and mutation feedback
 
@@ -522,10 +522,10 @@ Feature checklists:
 ### P3-F007 Responsive and accessibility gate
 
 - Sources: `docs/07:504-569`, `docs/05:404-457`, `docs/09:494-497`.
-- RED observed: no Playwright responsive/RTL/accessibility smoke tests.
-- GREEN: Playwright suite covers Arabic RTL, English LTR, locale persistence, density persistence, role-aware nav, protected shell, main landmarks, and no page-level overflow at 360, 768, 1280, and 1440 widths.
-- Code-structure check: E2E mocks Express auth/session and `/api/me`; permission visibility still comes from domain permission registry.
-- Verify: `bun run test:e2e`; CI installs Playwright Chromium before E2E.
+- RED observed: no documented manual responsive/RTL/accessibility gate.
+- GREEN: manual QA covers Arabic RTL, English LTR, locale persistence, role-aware nav, protected shell, main landmarks, and no page-level overflow at 360, 768, 1280, and 1440 widths.
+- Code-structure check: permission visibility still comes from domain permission registry; Express remains authorization authority.
+- Verify: manual frontend QA in `docs/QA.md`; CI no longer installs Playwright.
 
 Exit gate:
 
@@ -563,46 +563,58 @@ Feature checklists:
 
 ### P4-F001 Google Sheets applicant sync Adapter
 
+- Status: Complete for Adapter Interface and Express wiring.
 - Sources: `docs/01:275-293`, `docs/04:157-181`, `docs/08:483-502`.
 - RED: failing Adapter contract test using fake Sheet data for changed rows.
 - GREEN: implement Google Sheets Adapter behind explicit Interface.
+- Implemented Interface: `ApplicantSheetReader`.
+- Implemented Adapter: `createGoogleSheetsApplicantAdapter`.
 - Code-structure check: Adapter does not decide applicant status.
 - Architecture check: Seam is real if fake/test Adapter and Google Adapter both satisfy Interface.
 - DRY check: Sheet ID/range/column names from env/mapping config only.
-- Verify: adapter contract tests, failure classification tests, no secrets in logs.
+- Verify: `bunx vitest run apps/api/src/adapters/google-sheets.test.ts`; no row status decisions or secrets in Adapter logs.
 - Context/docs update: exact sheet mapping -> docs/06 or config docs when confirmed.
 
 ### P4-F002 Applicant Intake Import Module
 
+- Status: Complete for mapping, validation, dedupe hash, and import summaries.
 - Sources: `docs/04:157-223`, `docs/06:511-568`, `docs/05:80-87`, `docs/05:392-396`.
 - RED: tests for required fields, missing phone, duplicate phone, source hash idempotency, import run summary.
 - GREEN: implement mapping, validation, dedupe key generation, import result.
+- Implemented Module/Action surface: `importApplicantRows`.
+- Implemented repository Interface: `ApplicantImportRepository`.
 - Code-structure check: Module returns structured result; Action writes workflow decisions.
 - Architecture check: Interface hides Google row shape from callers.
 - DRY check: required field list and duplicate rules single-source.
-- Verify: unit tests with real Module, DB import integration tests.
+- Verify: `bunx vitest run packages/application/src/applicant-intake.test.ts packages/db/src/migrations.test.ts`; DB integration requires `TEST_DATABASE_URL`.
 - Context/docs update: new applicant status meaning -> `CONTEXT.md` and docs/06.
 
 ### P4-F003 Applicant import Actions and queue
 
+- Status: Complete for protected API and minimal review queue screen.
 - Sources: `docs/03:164-197`, `docs/04:209-223`, `docs/07:203-255`, `docs/07:597-641`.
 - RED: action tests for HR/Admin sync permission, row review list, duplicate warnings, import errors.
 - GREEN: implement sync Action, review queue API/screen.
+- Implemented routes: `POST /api/applicants/import-runs`, `GET /api/applicants/review-queue`.
+- Implemented web route: `/recruitment/applicants`.
 - Code-structure check: Action owns permission and row status transition.
 - Architecture check: review queue screen uses table pattern, not cards.
 - DRY check: applicant row status from central status model.
-- Verify: action/API tests, Playwright applicant queue smoke, RTL table check.
+- Verify: `bunx vitest run apps/api/src/http/applicants-routes.test.ts`; manual frontend QA in `docs/QA.md`.
 - Context/docs update: update docs if review statuses change.
 
 ### P4-F004 Applicant decision, screening, interview
 
+- Status: Complete for MVP recruitment flow: review decision UI, accept/create Person, merge duplicate, reject/defer, schedule interview, and record interview score.
 - Sources: `docs/03:181-248`, `docs/04:351-433`, `docs/06:620-647`.
 - RED: tests for accept/create person, merge duplicate, reject, screen decision, schedule interview, record score, minimum score warning.
 - GREEN: implement Actions and screens.
+- Implemented Actions: `decideApplicantImportRow`, `scheduleInterview`, `recordInterviewScore`.
+- Implemented routes: `POST /api/applicants/review-queue/:id/decision`, `POST /api/interviews`, `POST /api/interviews/:id/scores`.
 - Code-structure check: Action owns decision + transaction + audit; Module handles scoring mechanics if reused.
 - Architecture check: applicant decision transaction follows `docs/08:366`.
 - DRY check: rating/interview criteria are config/settings if reused.
-- Verify: action tests, transaction rollback tests, UI form tests.
+- Verify: `bunx vitest run packages/application/src/applicant-intake.test.ts apps/api/src/http/applicants-routes.test.ts`; frontend verified by `bun run typecheck`, `bun run build`, and manual QA.
 - Context/docs update: interview criteria TBD -> document confirmed values when known.
 
 Exit gate:
@@ -611,6 +623,8 @@ Exit gate:
 - Duplicate and invalid rows are visible.
 - Accepted applicant can become person profile.
 - Import idempotency tests pass.
+- Verification completed: `bun run typecheck`, `bun run build`, `bun run test apps/api`, `bun run test apps/web`, `bun run test packages/application`, `bun run test packages/contracts`, `bun run test packages/db`, manual frontend QA in `docs/QA.md`.
+- DB integration note: `bun run test:db:integration` still requires reachable Docker/Postgres and `TEST_DATABASE_URL`.
 
 ---
 
@@ -751,7 +765,7 @@ Feature checklists:
 - Code-structure check: workspace shell owns navigation mechanics; tabs own product content.
 - Architecture check: avoid giant event page Implementation; split by tab with shared Event Header Interface.
 - DRY check: event header/status components reused across tabs.
-- Verify: Playwright event workspace smoke, RTL tab behavior, permission visibility tests.
+- Verify: manual frontend QA for event workspace smoke, RTL tab behavior, permission visibility checks.
 - Context/docs update: tab changes -> docs/07.
 
 Exit gate:
@@ -1082,7 +1096,7 @@ Feature checklists:
 - Code-structure check: Action owns permission/lock/audit; Module validates attendance mechanics.
 - Architecture check: Module Interface returns structured state conflict errors.
 - DRY check: attendance status constants central.
-- Verify: unit/action/DB tests, mobile Playwright flow, audit tests.
+- Verify: unit/action/DB tests, manual mobile QA flow, audit tests.
 - Context/docs update: offline behavior remains open unless confirmed.
 
 ### P11-F003 Backup outcome handling

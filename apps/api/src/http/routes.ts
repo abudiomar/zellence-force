@@ -1,11 +1,18 @@
 import type { Express, RequestHandler } from "express";
 import {
+  decideApplicantImportRow,
   createInternalUser,
   getTenantSettings,
+  importApplicantRows,
   linkUserToPerson,
+  listApplicantReviewQueue,
   listInternalUsers,
+  recordInterviewScore,
+  scheduleInterview,
   setInternalUserActive,
   updateTenantSettings,
+  type ApplicantImportRepository,
+  type ApplicantSheetReader,
   type IdentityAdmin,
   type SessionRevoker,
   type SettingsRepository,
@@ -15,7 +22,11 @@ import {
   CREATE_INTERNAL_USER_INPUT_SCHEMA,
   LINK_USER_PERSON_INPUT_SCHEMA,
   UPDATE_TENANT_SETTINGS_INPUT_SCHEMA,
-  UPDATE_USER_STATUS_INPUT_SCHEMA
+  UPDATE_USER_STATUS_INPUT_SCHEMA,
+  APPLICANT_DECISION_INPUT_SCHEMA,
+  RECORD_INTERVIEW_SCORE_INPUT_SCHEMA,
+  RUN_APPLICANT_IMPORT_INPUT_SCHEMA,
+  SCHEDULE_INTERVIEW_INPUT_SCHEMA
 } from "@zellforce/contracts";
 import type { ActorRequest } from "./app";
 
@@ -26,10 +37,16 @@ type PhaseTwoDependencies = {
   sessions: SessionRevoker;
 };
 
+type PhaseFourDependencies = {
+  applicants: ApplicantImportRepository;
+  sheet: ApplicantSheetReader;
+};
+
 export function registerRoutes(
   app: Express,
   options: {
     phaseTwo?: PhaseTwoDependencies;
+    phaseFour?: PhaseFourDependencies;
     requireActor: RequestHandler;
   }
 ): void {
@@ -45,6 +62,7 @@ export function registerRoutes(
   }
 
   const deps = options.phaseTwo;
+  const applicantsDeps = options.phaseFour;
   app.get("/api/me", options.requireActor, (req, res) => {
     res.status(200).json((req as ActorRequest).actor);
   });
@@ -113,6 +131,84 @@ export function registerRoutes(
       const input = UPDATE_TENANT_SETTINGS_INPUT_SCHEMA.parse(req.body);
       res.json(
         await updateTenantSettings(deps, (req as ActorRequest).actor, input)
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  if (!applicantsDeps) {
+    return;
+  }
+
+  app.post("/api/applicants/import-runs", options.requireActor, async (req, res, next) => {
+    try {
+      const input = RUN_APPLICANT_IMPORT_INPUT_SCHEMA.parse(req.body);
+      res.status(201).json(
+        await importApplicantRows(applicantsDeps, (req as ActorRequest).actor, input)
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/applicants/review-queue", options.requireActor, async (req, res, next) => {
+    try {
+      res.json(
+        await listApplicantReviewQueue(
+          { applicants: applicantsDeps.applicants },
+          (req as ActorRequest).actor,
+          typeof req.query.status === "string" ? { status: req.query.status } : {}
+        )
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/applicants/review-queue/:id/decision", options.requireActor, async (req, res, next) => {
+    try {
+      const input = APPLICANT_DECISION_INPUT_SCHEMA.parse(req.body);
+      res.json(
+        await decideApplicantImportRow(
+          { applicants: applicantsDeps.applicants },
+          (req as ActorRequest).actor,
+          requiredParam(req.params.id),
+          input
+        )
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/interviews", options.requireActor, async (req, res, next) => {
+    try {
+      const input = SCHEDULE_INTERVIEW_INPUT_SCHEMA.parse(req.body);
+      res.status(201).json(
+        await scheduleInterview(
+          { applicants: applicantsDeps.applicants },
+          (req as ActorRequest).actor,
+          input
+        )
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/interviews/:id/scores", options.requireActor, async (req, res, next) => {
+    try {
+      const input = RECORD_INTERVIEW_SCORE_INPUT_SCHEMA.parse({
+        ...req.body,
+        interviewId: requiredParam(req.params.id)
+      });
+      res.json(
+        await recordInterviewScore(
+          { applicants: applicantsDeps.applicants },
+          (req as ActorRequest).actor,
+          input
+        )
       );
     } catch (error) {
       next(error);

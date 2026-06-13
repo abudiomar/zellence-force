@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { LANGUAGE_SCHEMA, USER_ROLE_SCHEMA } from "@zellforce/domain";
+import {
+  APPLICANT_IMPORT_ROW_STATUS_SCHEMA,
+  LANGUAGE_SCHEMA,
+  USER_ROLE_SCHEMA
+} from "@zellforce/domain";
 
 const EMAIL_SCHEMA = z.string().trim().toLowerCase().email();
 const TIMEZONE_SCHEMA = z.string().refine(
@@ -85,5 +89,116 @@ export const API_ERROR_SCHEMA = z.object({
 });
 
 export type ApiError = z.infer<typeof API_ERROR_SCHEMA>;
+
+export const GOOGLE_SHEET_MAPPING_SCHEMA = z.object({
+  fullName: z.string().trim().min(1),
+  phone: z.string().trim().min(1),
+  email: z.string().trim().min(1).optional(),
+  city: z.string().trim().min(1).optional(),
+  gender: z.string().trim().min(1).optional(),
+  nationalId: z.string().trim().min(1).optional(),
+  dateOfBirth: z.string().trim().min(1).optional()
+});
+
+export type GoogleSheetMapping = z.infer<typeof GOOGLE_SHEET_MAPPING_SCHEMA>;
+
+export const RUN_APPLICANT_IMPORT_INPUT_SCHEMA = z.object({
+  sourceId: z.string().trim().min(1),
+  sourceRange: z.string().trim().min(1),
+  mapping: GOOGLE_SHEET_MAPPING_SCHEMA
+});
+
+export type RunApplicantImportInput = z.infer<typeof RUN_APPLICANT_IMPORT_INPUT_SCHEMA>;
+
+export const APPLICANT_IMPORT_MAPPED_DATA_SCHEMA = z.object({
+  fullName: z.string().trim().min(1),
+  phone: z.string().trim().min(1),
+  email: EMAIL_SCHEMA.optional(),
+  city: z.string().trim().min(1).optional(),
+  gender: z.string().trim().min(1).optional(),
+  nationalId: z.string().trim().min(1).optional(),
+  dateOfBirth: z.string().trim().min(1).optional()
+});
+
+export type ApplicantImportMappedData = z.infer<typeof APPLICANT_IMPORT_MAPPED_DATA_SCHEMA>;
+
+export const APPLICANT_IMPORT_ROW_SCHEMA = z.object({
+  sourceRowId: z.string().trim().min(1),
+  rawData: z.record(z.string(), z.unknown()),
+  mappedData: APPLICANT_IMPORT_MAPPED_DATA_SCHEMA
+});
+
+export type ApplicantImportRow = z.infer<typeof APPLICANT_IMPORT_ROW_SCHEMA>;
+
+export const APPLICANT_REVIEW_QUEUE_ITEM_SCHEMA = z.object({
+  id: z.string().min(1),
+  sourceRowId: z.string().min(1),
+  status: APPLICANT_IMPORT_ROW_STATUS_SCHEMA,
+  fullName: z.string().min(1).nullable(),
+  phone: z.string().min(1).nullable(),
+  email: z.string().email().nullable(),
+  city: z.string().min(1).nullable(),
+  errorMessages: z.array(z.string()),
+  matchedPersonId: z.string().min(1).nullable(),
+  createdAt: z.string().min(1)
+});
+
+export type ApplicantReviewQueueItem = z.infer<typeof APPLICANT_REVIEW_QUEUE_ITEM_SCHEMA>;
+
+export const APPLICANT_DECISION_INPUT_SCHEMA = z.discriminatedUnion("decision", [
+  z.object({
+    decision: z.literal("accept"),
+    notes: z.string().trim().min(1).optional()
+  }),
+  z.object({
+    decision: z.literal("merge"),
+    targetPersonId: z.string().trim().min(1),
+    notes: z.string().trim().min(1).optional()
+  }),
+  z.object({
+    decision: z.literal("reject"),
+    notes: z.string().trim().min(1)
+  }),
+  z.object({
+    decision: z.literal("defer"),
+    notes: z.string().trim().min(1).optional()
+  })
+]);
+
+export type ApplicantDecisionInput = z.infer<typeof APPLICANT_DECISION_INPUT_SCHEMA>;
+
+export const SCHEDULE_INTERVIEW_INPUT_SCHEMA = z.object({
+  personId: z.string().trim().min(1),
+  eventId: z.string().trim().min(1).optional(),
+  interviewerUserId: z.string().trim().min(1).optional(),
+  scheduledAt: z.string().datetime(),
+  notes: z.string().trim().min(1).optional()
+});
+
+export type ScheduleInterviewInput = z.infer<typeof SCHEDULE_INTERVIEW_INPUT_SCHEMA>;
+
+export const RECORD_INTERVIEW_SCORE_INPUT_SCHEMA = z.object({
+  interviewId: z.string().trim().min(1),
+  scores: z.array(
+    z.object({
+      criterion: z.string().trim().min(1),
+      score: z.number().min(0).max(5)
+    })
+  ).min(1),
+  notes: z.string().trim().min(1).optional(),
+  minimumScore: z.number().min(0).max(5).optional()
+});
+
+export type RecordInterviewScoreInput = z.infer<typeof RECORD_INTERVIEW_SCORE_INPUT_SCHEMA>;
+
+export const APPLICANT_IMPORT_RESULT_SCHEMA = z.object({
+  importRunId: z.string().min(1),
+  rowsSeen: z.number().int().nonnegative(),
+  rowsImported: z.number().int().nonnegative(),
+  rowsFailed: z.number().int().nonnegative(),
+  status: z.enum(["completed", "failed", "partial"])
+});
+
+export type ApplicantImportResult = z.infer<typeof APPLICANT_IMPORT_RESULT_SCHEMA>;
 
 export const CONTRACTS_PACKAGE_STATUS = "ready" as const;

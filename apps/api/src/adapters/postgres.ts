@@ -1,10 +1,13 @@
 import type {
+  ApplicantImportRepository,
   BootstrapRepository,
   SessionRevoker,
   SettingsRepository,
   UserRepository
 } from "@zellforce/application";
 import type {
+  ApplicantImportMappedData,
+  ApplicantReviewQueueItem,
   AuthenticatedUser,
   CreateInternalUserInput,
   TenantSettings
@@ -28,6 +31,16 @@ type SettingsRow = {
   timezone: string;
   currency: string;
   hijri_enabled: boolean;
+};
+
+type ApplicantImportRow = {
+  id: string;
+  source_row_id: string;
+  status: ApplicantReviewQueueItem["status"];
+  mapped_data: ApplicantImportMappedData | null;
+  error_messages: string[] | null;
+  matched_person_id: string | null;
+  created_at: Date | string;
 };
 
 const USER_COLUMNS =
@@ -209,6 +222,257 @@ export function createPgSettingsRepository(client: DbClient): SettingsRepository
   };
 }
 
+export function createPgApplicantImportRepository(client: DbClient): ApplicantImportRepository {
+  return {
+    async createImportRun(input) {
+      const result = await client.query(
+        `
+          insert into applicant_import_runs (
+            tenant_id, source_type, source_id, source_range, started_by_user_id
+          )
+          values ($1, 'google_sheets', $2, $3, $4)
+          returning id
+        `,
+        [input.tenantId, input.sourceId, input.sourceRange, input.startedByUserId]
+      );
+      return (result.rows[0] as { id: string }).id;
+    },
+
+    async upsertImportRow(input) {
+      const result = await client.query(
+        `
+          insert into applicant_import_rows (
+            tenant_id, import_run_id, source_row_id, source_hash, raw_data,
+            mapped_data, status, error_messages, matched_person_id
+          )
+          values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          on conflict (tenant_id, import_run_id, source_row_id)
+          do update set
+            source_hash = excluded.source_hash,
+            raw_data = excluded.raw_data,
+            mapped_data = excluded.mapped_data,
+            status = excluded.status,
+            error_messages = excluded.error_messages,
+            matched_person_id = excluded.matched_person_id,
+            updated_at = now()
+          returning id
+        `,
+        [
+          input.tenantId,
+          input.importRunId,
+          input.sourceRowId,
+          input.sourceHash,
+          JSON.stringify(input.rawData),
+          input.mappedData ? JSON.stringify(input.mappedData) : null,
+          input.status,
+          JSON.stringify(input.errorMessages),
+          input.matchedPersonId
+        ]
+      );
+      return { id: (result.rows[0] as { id: string }).id, ...input };
+    },
+
+    async finishImportRun(input) {
+      await client.query(
+        `
+          update applicant_import_runs
+          set finished_at = now(),
+              rows_seen = $3,
+              rows_imported = $4,
+              rows_failed = $5,
+              status = $6,
+              error_summary = $7
+          where tenant_id = $1 and id = $2
+        `,
+        [
+          input.tenantId,
+          input.importRunId,
+          input.rowsSeen,
+          input.rowsImported,
+          input.rowsFailed,
+          input.status,
+          input.errorSummary ?? null
+        ]
+      );
+    },
+
+    async findExistingPersonByPhone(tenantId, phone) {
+      const result = await client.query(
+        "select id from persons where tenant_id = $1 and phone = $2 limit 1",
+        [tenantId, phone]
+      );
+      return (result.rows[0] as { id?: string } | undefined)?.id ?? null;
+    },
+
+    async listReviewQueue(input) {
+      const params: unknown[] = [input.tenantId];
+      const statusFilter = input.status ? "and status = $2" : "";
+      if (input.status) params.push(input.status);
+      const result = await client.query(
+        `
+          select id, source_row_id, status, mapped_data, error_messages,
+                 matched_person_id, created_at
+          from applicant_import_rows
+          where tenant_id = $1 ${statusFilter}
+          order by created_at desc
+        `,
+        params
+      );
+      return result.rows.map(mapApplicantQueueRow);
+    },
+
+    async findImportRow(tenantId, rowId) {
+      const result = await client.query(
+        `
+          select id, source_row_id, status, mapped_data, error_messages,
+                 matched_person_id, created_at
+          from applicant_import_rows
+          where tenant_id = $1 and id = $2
+        `,
+        [tenantId, rowId]
+      );
+      return result.rows[0] ? mapApplicantQueueRow(result.rows[0]) : null;
+    },
+
+    async createPersonFromApplicant(input) {
+      const result = await client.query(
+        `
+          insert into persons (tenant_id, full_name, phone, city)
+          select tenant_id,
+                 mapped_data->>'fullName',
+                 mapped_data->>'phone',
+                 mapped_data->>'city'
+          from applicant_import_rows
+          where tenant_id = $1 and id = $2
+          returning id
+        `,
+        [input.tenantId, input.rowId]
+      );
+      return (result.rows[0] as { id: string }).id;
+    },
+
+    async mergeApplicantIntoPerson(input) {
+      await client.query(
+        `
+          update persons
+          set full_name = coalesce(applicant_import_rows.mapped_data->>'fullName', persons.full_name),
+              phone = coalesce(applicant_import_rows.mapped_data->>'phone', persons.phone),
+              city = coalesce(applicant_import_rows.mapped_data->>'city', persons.city)
+          from applicant_import_rows
+          where persons.tenant_id = $1
+            and persons.id = $3
+            and applicant_import_rows.tenant_id = $1
+            and applicant_import_rows.id = $2
+        `,
+        [input.tenantId, input.rowId, input.targetPersonId]
+      );
+      return input.targetPersonId;
+    },
+
+    async updateImportRowDecision(input) {
+      await client.query(
+        `
+          update applicant_import_rows
+          set status = $4,
+              created_person_id = case when $4 = 'accepted' then $5 else created_person_id end,
+              matched_person_id = case when $4 = 'merged' then $5 else matched_person_id end,
+              reviewed_by_user_id = $3,
+              reviewed_at = now(),
+              decision_notes = $6,
+              updated_at = now()
+          where tenant_id = $1 and id = $2
+        `,
+        [
+          input.tenantId,
+          input.rowId,
+          input.actorUserId,
+          input.status,
+          input.personId,
+          input.notes ?? null
+        ]
+      );
+    },
+
+    async scheduleInterview(input) {
+      const result = await client.query(
+        `
+          insert into interviews (
+            tenant_id, person_id, event_id, interviewer_user_id, scheduled_at, notes
+          )
+          values ($1, $2, $3, $4, $5, $6)
+          returning id
+        `,
+        [
+          input.tenantId,
+          input.personId,
+          input.eventId ?? null,
+          input.interviewerUserId ?? input.actorUserId,
+          input.scheduledAt,
+          input.notes ?? null
+        ]
+      );
+      return (result.rows[0] as { id: string }).id;
+    },
+
+    async recordInterviewScore(input) {
+      await client.query("delete from interview_scores where tenant_id = $1 and interview_id = $2", [
+        input.tenantId,
+        input.interviewId
+      ]);
+      for (const score of input.scores) {
+        await client.query(
+          `
+            insert into interview_scores (tenant_id, interview_id, criterion, score)
+            values ($1, $2, $3, $4)
+          `,
+          [input.tenantId, input.interviewId, score.criterion, score.score]
+        );
+      }
+      const result = await client.query(
+        `
+          update interviews
+          set status = 'completed',
+              overall_score = (
+                select avg(score) from interview_scores
+                where tenant_id = $1 and interview_id = $2
+              ),
+              notes = coalesce($3, notes),
+              updated_at = now()
+          where tenant_id = $1 and id = $2
+          returning overall_score
+        `,
+        [input.tenantId, input.interviewId, input.notes ?? null]
+      );
+      const overallScore = Number((result.rows[0] as { overall_score: string | number }).overall_score);
+      return {
+        interviewId: input.interviewId,
+        overallScore,
+        belowMinimum: input.minimumScore !== undefined ? overallScore < input.minimumScore : false
+      };
+    },
+
+    async writeAudit(input) {
+      await client.query(
+        `
+          insert into audit_logs (
+            tenant_id, actor_user_id, action, entity_type, entity_id,
+            before_data, after_data
+          )
+          values ($1, $2, $3, 'applicant_import_row', $4, $5, $6)
+        `,
+        [
+          input.tenantId,
+          input.actorUserId,
+          input.action,
+          input.entityId,
+          JSON.stringify(input.before),
+          JSON.stringify(input.after)
+        ]
+      );
+    }
+  };
+}
+
 export function createSessionRevoker(client: DbClient): SessionRevoker {
   return {
     async revokeAllForIdentity(authUserId) {
@@ -284,5 +548,21 @@ function mapSettings(value: unknown): TenantSettings {
     timezone: row.timezone,
     currency: row.currency,
     hijriEnabled: row.hijri_enabled
+  };
+}
+
+function mapApplicantQueueRow(value: unknown): ApplicantReviewQueueItem {
+  const row = value as ApplicantImportRow;
+  return {
+    id: row.id,
+    sourceRowId: row.source_row_id,
+    status: row.status,
+    fullName: row.mapped_data?.fullName ?? null,
+    phone: row.mapped_data?.phone ?? null,
+    email: row.mapped_data?.email ?? null,
+    city: row.mapped_data?.city ?? null,
+    errorMessages: row.error_messages ?? [],
+    matchedPersonId: row.matched_person_id,
+    createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at
   };
 }

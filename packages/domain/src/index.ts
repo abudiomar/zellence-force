@@ -170,6 +170,8 @@ export const APPLICANT_IMPORT_ROW_STATUSES = [
   "deferred"
 ] as const;
 
+export const APPLICANT_IMPORT_ROW_STATUS_SCHEMA = z.enum(APPLICANT_IMPORT_ROW_STATUSES);
+
 export const PAYMENT_BATCH_STATUSES = [
   "draft",
   "in_review",

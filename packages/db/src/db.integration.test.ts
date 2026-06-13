@@ -49,12 +49,21 @@ describe.skipIf(!hasTestDatabase)("Postgres integration", () => {
     const secondRun = await runMigrations(dbPool());
     const applied = await getAppliedMigrations(dbPool());
 
-    expect(firstRun.applied).toEqual(["0001_initial_schema", "0002_better_auth"]);
+    expect(firstRun.applied).toEqual([
+      "0001_initial_schema",
+      "0002_better_auth",
+      "0003_applicant_intake"
+    ]);
     expect(secondRun.applied).toEqual([]);
-    expect(secondRun.skipped).toEqual(["0001_initial_schema", "0002_better_auth"]);
+    expect(secondRun.skipped).toEqual([
+      "0001_initial_schema",
+      "0002_better_auth",
+      "0003_applicant_intake"
+    ]);
     expect(applied).toEqual([
       { version: "0001_initial_schema" },
-      { version: "0002_better_auth" }
+      { version: "0002_better_auth" },
+      { version: "0003_applicant_intake" }
     ]);
   });
 

@@ -147,7 +147,7 @@ Adapters own external provider details.
 | Validation | Shared schemas, e.g. Zod | Recommended default | Request validation and shared typed contracts |
 | UI system | Tokenized component system with RTL support | Recommended default | Consistent with Phase 7 |
 | Tables/grids | TanStack Table or equivalent | Recommended default | Dense data, filters, sorting, column control |
-| Testing | Vitest/Jest + integration tests + Playwright | Recommended default | TDD, module tests, end-to-end core flows |
+| Testing | Vitest/Jest + integration tests + manual frontend QA | Current default | TDD, Module tests, backend/API integration, and manual screen acceptance |
 | CI | GitHub Actions or equivalent | Recommended default | Test/lint/build gates |
 | Deployment | Dockerized apps in KSA-region hosting | Recommended default | Portability, controlled environment |
 
@@ -831,7 +831,7 @@ No production behavior without a failing test first.
 | Unit tests | pure Modules: payment, budget, import mapping, assignment pipeline |
 | Action tests | role checks, state transitions, transaction behavior |
 | Integration tests | DB queries, API routes, webhook handling, file metadata |
-| E2E tests | login, applicant review, event staffing, supervisor attendance, payment review |
+| Manual frontend QA | login, applicant review, event staffing, supervisor attendance, payment review |
 | Accessibility tests | critical screens, keyboard/focus, contrast checks |
 
 ### 22.3 Required Test Suites Before MVP Pilot

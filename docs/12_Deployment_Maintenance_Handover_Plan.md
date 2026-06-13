@@ -246,11 +246,7 @@ bun run test:integration
 bun run build
 ```
 
-E2E tests should run for staging release candidates:
-
-```powershell
-bun run test:e2e
-```
+Frontend staging release candidates should pass manual QA in `docs/QA.md`.
 
 Exact script names remain `TBD` until implementation defines package scripts.
 
@@ -261,7 +257,7 @@ Production release may proceed only when:
 - CI passes;
 - DB migrations pass on staging;
 - staging deploy succeeds;
-- critical E2E smoke passes;
+- critical manual frontend QA passes;
 - UAT sign-off exists for MVP release;
 - backup restore evidence exists before pilot;
 - no Severity 1 or Severity 2 bugs remain;

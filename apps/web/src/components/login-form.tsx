@@ -6,7 +6,10 @@ import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { AlertBanner, Button, ErrorSummary, Field, TextInput } from "@zellforce/ui";
+import { AlertBanner } from "@zellforce/ui/components/alert";
+import { Button } from "@zellforce/ui/components/button";
+import { Field } from "@zellforce/ui/components/label";
+import { TextInput } from "@zellforce/ui/components/input";
 import { authClient } from "../auth/auth-client";
 import { loginWithEmail } from "../auth/auth-flow";
 
@@ -43,7 +46,13 @@ export function LoginForm() {
 
   return (
     <form className="auth-form" onSubmit={form.handleSubmit(submit)} noValidate>
-      <ErrorSummary title={t("error")} errors={errors} />
+      {errors.length ? (
+        <AlertBanner tone="danger" title={t("error")}>
+          <ul className="form-error-list">
+            {errors.map((message) => <li key={message}>{message}</li>)}
+          </ul>
+        </AlertBanner>
+      ) : null}
       <Field label={t("email")} error={form.formState.errors.email?.message}>
         <TextInput dir="ltr" type="email" autoComplete="email" {...form.register("email")} />
       </Field>
