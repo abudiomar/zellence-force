@@ -1,21 +1,35 @@
 import {
   APPLICANT_DECISION_INPUT_SCHEMA,
+  ADD_SHORTLIST_INPUT_SCHEMA,
+  DEMO_EVENT_INPUT_SCHEMA,
   RECORD_INTERVIEW_SCORE_INPUT_SCHEMA,
+  PREVIEW_SHEET_HEADERS_INPUT_SCHEMA,
   RUN_APPLICANT_IMPORT_INPUT_SCHEMA,
   SCHEDULE_INTERVIEW_INPUT_SCHEMA,
+  STAFF_POOL_FILTER_SCHEMA,
+  UPDATE_INTERVIEW_PIPELINE_INPUT_SCHEMA,
+  UPDATE_SCREENING_INPUT_SCHEMA,
   CREATE_INTERNAL_USER_INPUT_SCHEMA,
   TENANT_SETTINGS_SCHEMA,
   UPDATE_TENANT_SETTINGS_INPUT_SCHEMA,
+  type AddShortlistInput,
   type ApplicantDecisionInput,
   type ApplicantImportMappedData,
   type ApplicantImportResult,
   type ApplicantReviewQueueItem,
   type AuthenticatedUser,
   type CreateInternalUserInput,
+  type DemoEvent,
+  type DemoEventInput,
   type RecordInterviewScoreInput,
   type RunApplicantImportInput,
   type ScheduleInterviewInput,
+  type SheetHeaderPreview,
+  type StaffPoolFilter,
+  type StaffPoolItem,
   type TenantSettings,
+  type UpdateInterviewPipelineInput,
+  type UpdateScreeningInput,
   type UpdateTenantSettingsInput
 } from "@zellforce/contracts";
 import {
@@ -168,6 +182,59 @@ export interface ApplicantImportRepository {
     personId: string | null;
     notes?: string;
   }): Promise<void>;
+  updateScreening(input: {
+    tenantId: string;
+    actorUserId: string;
+    rowId: string;
+    screeningStatus: UpdateScreeningInput["screeningStatus"];
+    notes?: string;
+  }): Promise<ApplicantReviewQueueItem>;
+  updateInterviewPipeline(input: {
+    tenantId: string;
+    actorUserId: string;
+    rowId: string;
+    interviewStatus: UpdateInterviewPipelineInput["interviewStatus"];
+    contractSent?: boolean;
+    contractStatus?: UpdateInterviewPipelineInput["contractStatus"];
+    presentationScore?: number | null;
+    communicationScore?: number | null;
+    englishFluencyScore?: number | null;
+    finalScore: number | null;
+  }): Promise<ApplicantReviewQueueItem>;
+  saveToStaffPool(input: {
+    tenantId: string;
+    actorUserId: string;
+    rowId: string;
+    mode: "staff" | "future";
+  }): Promise<{ personId: string | null; row: ApplicantReviewQueueItem }>;
+  listStaffPool(input: {
+    tenantId: string;
+    filter: StaffPoolFilter;
+  }): Promise<StaffPoolItem[]>;
+  createDemoEvent(input: {
+    tenantId: string;
+    actorUserId: string;
+    event: DemoEventInput;
+  }): Promise<DemoEvent>;
+  listDemoEvents(tenantId: string): Promise<DemoEvent[]>;
+  addCandidateToDemoEvent(input: {
+    tenantId: string;
+    actorUserId: string;
+    eventId: string;
+    candidate: AddShortlistInput;
+  }): Promise<DemoEvent>;
+  listWhatsAppInbox(tenantId: string): Promise<WhatsAppInboundMessageSummary[]>;
+  recordWhatsAppInbound(input: {
+    tenantId: string;
+    waMessageId: string;
+    fromPhone: string;
+    body: string;
+    payload: unknown;
+    intent: WhatsAppInboundMessageSummary["intent"];
+    isEmergency: boolean;
+  }): Promise<WhatsAppInboundMessageSummary>;
+  findWhatsAppContactContext(tenantId: string, phone: string): Promise<WhatsAppContactContext | null>;
+  findDefaultTenantId?(): Promise<string | null>;
   scheduleInterview(input: {
     tenantId: string;
     actorUserId: string;
@@ -194,6 +261,49 @@ export interface ApplicantImportRepository {
     after: unknown;
   }): Promise<void>;
 }
+
+export type WhatsAppInboundMessageSummary = {
+  id: string;
+  fromPhone: string;
+  body: string;
+  intent: "profile_request" | "emergency" | "current_status" | "unknown";
+  isEmergency: boolean;
+  personId: string | null;
+  applicantRowId: string | null;
+  matchedName: string | null;
+  receivedAt: string;
+};
+
+export type WhatsAppContactContext = {
+  personId: string | null;
+  applicantRowId: string | null;
+  fullName: string | null;
+  phone: string;
+  email: string | null;
+  city: string | null;
+  gender: string | null;
+  age: number | null;
+  screeningStatus: ApplicantReviewQueueItem["screeningStatus"] | null;
+  interviewStatus: ApplicantReviewQueueItem["interviewStatus"] | null;
+  contractStatus: ApplicantReviewQueueItem["contractStatus"] | null;
+  finalScore: number | null;
+};
+
+export type WhatsAppBotButton = {
+  id: "apply" | "contact_team" | "profile" | "event_details";
+  title: string;
+};
+
+export type WhatsAppBotResponse =
+  | {
+      kind: "interactive_buttons";
+      body: string;
+      buttons: WhatsAppBotButton[];
+    }
+  | {
+      kind: "text";
+      body: string;
+    };
 
 export function authorize(actor: RequestActor, permission: Permission): PermissionDecision {
   const decision = authorizeRole(actor.role, permission);
@@ -404,6 +514,21 @@ export async function importApplicantRows(
   return result;
 }
 
+export async function previewApplicantSheetHeaders(
+  deps: { sheet: ApplicantSheetReader },
+  actor: RequestActor,
+  rawInput: { sourceId: string; sourceRange: string }
+): Promise<SheetHeaderPreview> {
+  authorize(actor, PERMISSIONS.MANAGE_APPLICANT_IMPORT);
+  const input = PREVIEW_SHEET_HEADERS_INPUT_SCHEMA.parse(rawInput);
+  const rows = await deps.sheet.readRows(input);
+  const headers = [...new Set(rows.flatMap((row) => Object.keys(row.values)))];
+  return {
+    headers,
+    sampleRows: rows.slice(0, 3).map((row) => row.values)
+  };
+}
+
 export async function listApplicantReviewQueue(
   deps: { applicants: ApplicantImportRepository },
   actor: RequestActor,
@@ -467,6 +592,167 @@ export async function decideApplicantImportRow(
     after: { personId, status }
   });
   return { personId, status };
+}
+
+export async function updateApplicantScreening(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor,
+  rowId: string,
+  rawInput: UpdateScreeningInput
+): Promise<ApplicantReviewQueueItem> {
+  authorize(actor, PERMISSIONS.MANAGE_APPLICANT_IMPORT);
+  const input = UPDATE_SCREENING_INPUT_SCHEMA.parse(rawInput);
+  return deps.applicants.updateScreening({
+    tenantId: actor.tenantId,
+    actorUserId: actor.id,
+    rowId,
+    screeningStatus: input.screeningStatus,
+    ...(input.notes ? { notes: input.notes } : {})
+  });
+}
+
+export async function updateApplicantInterviewPipeline(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor,
+  rowId: string,
+  rawInput: UpdateInterviewPipelineInput
+): Promise<ApplicantReviewQueueItem> {
+  authorize(actor, PERMISSIONS.MANAGE_PEOPLE);
+  const input = UPDATE_INTERVIEW_PIPELINE_INPUT_SCHEMA.parse(rawInput);
+  const scores = input.scores ?? {};
+  const finalScore = averageScores([
+    scores.presentation ?? null,
+    scores.communication ?? null,
+    scores.englishFluency ?? null
+  ]);
+
+  return deps.applicants.updateInterviewPipeline({
+    tenantId: actor.tenantId,
+    actorUserId: actor.id,
+    rowId,
+    interviewStatus: input.interviewStatus,
+    ...(input.contractSent !== undefined ? { contractSent: input.contractSent } : {}),
+    ...(input.contractStatus ? { contractStatus: input.contractStatus } : {}),
+    presentationScore: scores.presentation ?? null,
+    communicationScore: scores.communication ?? null,
+    englishFluencyScore: scores.englishFluency ?? null,
+    finalScore
+  });
+}
+
+export async function saveApplicantToStaffPool(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor,
+  rowId: string,
+  mode: "staff" | "future"
+): Promise<{ personId: string | null; row: ApplicantReviewQueueItem }> {
+  authorize(actor, PERMISSIONS.MANAGE_PEOPLE);
+  return deps.applicants.saveToStaffPool({
+    tenantId: actor.tenantId,
+    actorUserId: actor.id,
+    rowId,
+    mode
+  });
+}
+
+export async function listStaffPool(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor,
+  rawFilter: StaffPoolFilter
+): Promise<StaffPoolItem[]> {
+  authorize(actor, PERMISSIONS.MANAGE_PEOPLE);
+  const filter = STAFF_POOL_FILTER_SCHEMA.parse(rawFilter);
+  return deps.applicants.listStaffPool({ tenantId: actor.tenantId, filter });
+}
+
+export async function createDemoEvent(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor,
+  rawInput: DemoEventInput
+): Promise<DemoEvent> {
+  authorize(actor, PERMISSIONS.MANAGE_PEOPLE);
+  const event = DEMO_EVENT_INPUT_SCHEMA.parse(rawInput);
+  return deps.applicants.createDemoEvent({
+    tenantId: actor.tenantId,
+    actorUserId: actor.id,
+    event
+  });
+}
+
+export async function listDemoEvents(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor
+): Promise<DemoEvent[]> {
+  authorize(actor, PERMISSIONS.MANAGE_PEOPLE);
+  return deps.applicants.listDemoEvents(actor.tenantId);
+}
+
+export async function addCandidateToDemoEvent(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor,
+  eventId: string,
+  rawInput: AddShortlistInput
+): Promise<DemoEvent> {
+  authorize(actor, PERMISSIONS.MANAGE_PEOPLE);
+  const candidate = ADD_SHORTLIST_INPUT_SCHEMA.parse(rawInput);
+  return deps.applicants.addCandidateToDemoEvent({
+    tenantId: actor.tenantId,
+    actorUserId: actor.id,
+    eventId,
+    candidate
+  });
+}
+
+export async function listWhatsAppInbox(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor
+): Promise<WhatsAppInboundMessageSummary[]> {
+  authorize(actor, PERMISSIONS.MANAGE_PEOPLE);
+  return deps.applicants.listWhatsAppInbox(actor.tenantId);
+}
+
+export async function recordWhatsAppInbound(
+  deps: { applicants: ApplicantImportRepository },
+  input: {
+    tenantId: string;
+    waMessageId: string;
+    fromPhone: string;
+    body: string;
+    payload: unknown;
+    actionId?: string | null;
+  }
+): Promise<WhatsAppInboundMessageSummary> {
+  const intent = classifyWhatsAppIntent(input.body, input.actionId);
+  return deps.applicants.recordWhatsAppInbound({
+    ...input,
+    intent,
+    isEmergency: intent === "emergency"
+  });
+}
+
+export async function handleWhatsAppInbound(
+  deps: { applicants: ApplicantImportRepository },
+  input: {
+    tenantId: string;
+    waMessageId: string;
+    fromPhone: string;
+    body: string;
+    payload: unknown;
+    actionId?: string | null;
+  }
+): Promise<{ inbound: WhatsAppInboundMessageSummary; response: WhatsAppBotResponse }> {
+  const inbound = await recordWhatsAppInbound(deps, input);
+  const contact = await deps.applicants.findWhatsAppContactContext(
+    input.tenantId,
+    input.fromPhone
+  );
+  return {
+    inbound,
+    response: createWhatsAppBotResponse({
+      contact,
+      actionId: input.actionId ?? null
+    })
+  };
 }
 
 export async function scheduleInterview(
@@ -535,6 +821,112 @@ function createApplicantSourceHash(
   return createHash("sha256")
     .update(JSON.stringify({ sourceId, sourceRowId, mapped }))
     .digest("hex");
+}
+
+function averageScores(scores: Array<number | null | undefined>): number | null {
+  const values = scores.filter((score): score is number => typeof score === "number");
+  if (values.length === 0) return null;
+  return Math.round((values.reduce((sum, score) => sum + score, 0) / values.length) * 100) / 100;
+}
+
+const MAG_APPLY_FORM_URL =
+  "https://docs.google.com/forms/d/1mwzFfokrfUOsd6ZfjC6pHy4JxJAJue3dnxx-QyN2WTM/viewform?edit_requested=true";
+
+export function createWhatsAppBotResponse(input: {
+  contact: WhatsAppContactContext | null;
+  actionId: string | null;
+}): WhatsAppBotResponse {
+  if (input.actionId === "apply") {
+    return {
+      kind: "text",
+      body: `You can apply to MAG Events here:\n${MAG_APPLY_FORM_URL}`
+    };
+  }
+
+  if (input.actionId === "contact_team") {
+    return {
+      kind: "text",
+      body: "Your request has been received. The MAG Events team will contact you soon."
+    };
+  }
+
+  const isPassedRegisteredUser =
+    input.contact?.interviewStatus === "passed" && Boolean(input.contact.fullName);
+
+  if (input.actionId === "profile" && isPassedRegisteredUser && input.contact) {
+    return {
+      kind: "text",
+      body: formatWhatsAppProfile(input.contact)
+    };
+  }
+
+  if (input.actionId === "event_details" && isPassedRegisteredUser) {
+    return {
+      kind: "text",
+      body: "You will be informed here when you are assigned to an event."
+    };
+  }
+
+  if (isPassedRegisteredUser && input.contact) {
+    return {
+      kind: "interactive_buttons",
+      body: `Welcome back ${input.contact.fullName}. What would you like to view?`,
+      buttons: [
+        { id: "profile", title: "Profile" },
+        { id: "event_details", title: "Event details" }
+      ]
+    };
+  }
+
+  return {
+    kind: "interactive_buttons",
+    body: "Welcome to MAG Events. How can we help you today?",
+    buttons: [
+      { id: "apply", title: "Apply" },
+      { id: "contact_team", title: "Contact team" }
+    ]
+  };
+}
+
+function formatWhatsAppProfile(contact: WhatsAppContactContext): string {
+  const lines = [
+    "MAG Events profile",
+    `Name: ${contact.fullName ?? "-"}`,
+    `Phone: ${contact.phone}`,
+    `City: ${contact.city ?? "-"}`,
+    `Age: ${contact.age ?? "-"}`,
+    `Gender: ${contact.gender ?? "-"}`,
+    `Interview: ${contact.interviewStatus ? contact.interviewStatus.replaceAll("_", " ") : "-"}`,
+    `Contract: ${contact.contractStatus ? contact.contractStatus.replaceAll("_", " ") : "-"}`,
+    `Final score: ${contact.finalScore ?? "-"}`
+  ];
+  return lines.join("\n");
+}
+
+export function classifyWhatsAppIntent(
+  body: string,
+  actionId?: string | null
+): WhatsAppInboundMessageSummary["intent"] {
+  if (actionId === "profile") return "profile_request";
+  if (actionId === "event_details") return "current_status";
+  const normalized = body.trim().toLowerCase();
+  if (!normalized) return "unknown";
+  if (
+    /\b(profile|my info|بيانات|ملفي|معلوماتي)\b/.test(normalized)
+  ) {
+    return "profile_request";
+  }
+  if (
+    /\b(emergency|urgent|can't attend|cannot attend|not attending|غائب|طارئ|اعتذر|ما اقدر|ما أقدر|لن احضر)\b/.test(normalized)
+  ) {
+    return "emergency";
+  }
+  if (
+    /\b(status|application|contract|حالة|طلبي|عقد)\b/.test(normalized)
+  ) {
+    return "current_status";
+  }
+  return "unknown";
 }
 
 export async function bootstrapOwner(

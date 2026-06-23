@@ -1,4 +1,4 @@
-export const UI_DENSITIES = ["comfortable"] as const;
+export const UI_DENSITIES = ["comfortable", "compact"] as const;
 export type UiDensity = (typeof UI_DENSITIES)[number];
 
 export const UI_STATUS_TONES = [
@@ -51,9 +51,11 @@ export const UI_TOKENS = {
   },
   size: {
     controlComfortable: "40px",
+    controlCompact: "34px",
     touch: "48px",
     sidebar: "272px",
     topbar: "64px",
-    rowComfortable: "48px"
+    rowComfortable: "48px",
+    rowCompact: "40px"
   }
 } as const;

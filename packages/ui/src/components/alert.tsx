@@ -24,3 +24,21 @@ export function AlertBanner({ tone, title, children }: { tone: StatusTone; title
     </Alert>
   );
 }
+
+export function ScreenState({
+  state,
+  title,
+  children
+}: {
+  state?: "empty" | "loading" | "error" | "success";
+  title: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <section className="grid place-items-center gap-2 rounded-md border border-dashed border-[hsl(var(--border))] p-6 text-center">
+      <div className="text-sm font-semibold text-[hsl(var(--muted-foreground))]">{state ?? "empty"}</div>
+      <h2 className="m-0 text-lg font-bold">{title}</h2>
+      {children ? <div className="text-sm text-[hsl(var(--muted-foreground))]">{children}</div> : null}
+    </section>
+  );
+}

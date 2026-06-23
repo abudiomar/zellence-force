@@ -14,7 +14,7 @@ describe("environment schema", () => {
       expect(result.issues).toContain("DATABASE_URL");
       expect(result.issues).toContain("BETTER_AUTH_SECRET");
       expect(result.issues).toContain("BETTER_AUTH_URL");
-      expect(result.issues).toContain("TOKEN_SIGNING_SECRET");
+      expect(result.issues).not.toContain("TOKEN_SIGNING_SECRET");
     }
   });
 

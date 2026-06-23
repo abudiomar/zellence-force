@@ -32,16 +32,37 @@ export function createGoogleSheetsApplicantAdapter(input: {
               "Full Name": "Sara Ahmed",
               Mobile: "+966500000000",
               Email: "sara@example.com",
-              City: "Riyadh"
+              City: "Riyadh",
+              Gender: "female",
+              Age: "25",
+              Photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&q=80",
+              CV: "https://example.com/demo/sara-ahmed-cv.pdf",
+              Experience: "Luxury retail event hostess"
             }
           },
           {
             rowId: "3",
             values: {
+              "Full Name": "Omar Khalid",
+              Mobile: "+966511111111",
+              Email: "omar@example.com",
+              City: "Riyadh",
+              Gender: "male",
+              Age: "27",
+              Photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&q=80",
+              CV: "https://example.com/demo/omar-khalid-cv.pdf",
+              Experience: "Usher and crowd flow lead"
+            }
+          },
+          {
+            rowId: "4",
+            values: {
               "Full Name": "Missing Phone",
               Mobile: "",
               Email: "missing-phone@example.com",
-              City: "Jeddah"
+              City: "Jeddah",
+              Gender: "female",
+              Age: "23"
             }
           }
         ];

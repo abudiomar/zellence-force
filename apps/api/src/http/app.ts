@@ -16,7 +16,8 @@ import {
   type RequestActor,
   type SessionRevoker,
   type SettingsRepository,
-  type UserRepository
+  type UserRepository,
+  type WhatsAppBotResponse
 } from "@zellforce/application";
 import { registerRoutes } from "./routes";
 
@@ -45,6 +46,11 @@ export type CreateExpressAppOptions = {
     applicants: ApplicantImportRepository;
     sheet: ApplicantSheetReader;
   };
+  whatsappSender?: {
+    send(input: { to: string; response: WhatsAppBotResponse }): Promise<void>;
+  };
+  whatsappWebhookVerifyToken?: string;
+  whatsappWebhookTenantId?: string;
 };
 
 export function createExpressApp(options: CreateExpressAppOptions = {}): Express {
@@ -70,7 +76,14 @@ export function createExpressApp(options: CreateExpressAppOptions = {}): Express
   const routeOptions = {
     requireActor: createRequireActor(sessionReader, options.phaseTwo?.users),
     ...(options.phaseTwo ? { phaseTwo: options.phaseTwo } : {}),
-    ...(options.phaseFour ? { phaseFour: options.phaseFour } : {})
+    ...(options.phaseFour ? { phaseFour: options.phaseFour } : {}),
+    ...(options.whatsappSender ? { whatsappSender: options.whatsappSender } : {}),
+    ...(options.whatsappWebhookVerifyToken
+      ? { whatsappWebhookVerifyToken: options.whatsappWebhookVerifyToken }
+      : {}),
+    ...(options.whatsappWebhookTenantId
+      ? { whatsappWebhookTenantId: options.whatsappWebhookTenantId }
+      : {})
   };
   registerRoutes(app, routeOptions);
 

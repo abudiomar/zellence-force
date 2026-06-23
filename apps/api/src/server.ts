@@ -10,6 +10,8 @@ import {
   createSessionRevoker
 } from "./adapters/postgres";
 import { createGoogleSheetsApplicantAdapter } from "./adapters/google-sheets";
+import { createWhatsAppCloudSender } from "./adapters/whatsapp-cloud";
+import { loadGoogleSheetsAuth } from "./config/google-service-account";
 import { loadApiServerEnv } from "./config/runtime-env";
 import { createExpressApp } from "./http/app";
 
@@ -21,15 +23,14 @@ const pool = createPgPool({
 
 const auth = createAuth({ pool, env });
 const identityProvisioner = createIdentityProvisioner({ pool, env });
-const googleServiceAccount =
-  env.GOOGLE_CLIENT_EMAIL && env.GOOGLE_PRIVATE_KEY
-    ? {
-        serviceAccount: {
-          clientEmail: env.GOOGLE_CLIENT_EMAIL,
-          privateKey: env.GOOGLE_PRIVATE_KEY
-        }
-      }
-    : {};
+const googleServiceAccount = loadGoogleSheetsAuth(env);
+const whatsappSender =
+  env.WHATSAPP_ACCESS_TOKEN && env.WHATSAPP_PHONE_NUMBER_ID
+    ? createWhatsAppCloudSender({
+        accessToken: env.WHATSAPP_ACCESS_TOKEN,
+        phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID
+      })
+    : undefined;
 const app = createExpressApp({
   auth,
   corsOrigin: env.CORS_ORIGIN ?? env.APP_URL,
@@ -42,7 +43,11 @@ const app = createExpressApp({
   phaseFour: {
     applicants: createPgApplicantImportRepository(pool),
     sheet: createGoogleSheetsApplicantAdapter(googleServiceAccount)
-  }
+  },
+  ...(whatsappSender ? { whatsappSender } : {}),
+  ...(env.WHATSAPP_WEBHOOK_VERIFY_TOKEN
+    ? { whatsappWebhookVerifyToken: env.WHATSAPP_WEBHOOK_VERIFY_TOKEN }
+    : {})
 });
 
 const server = createServer(app);

@@ -52,18 +52,21 @@ describe.skipIf(!hasTestDatabase)("Postgres integration", () => {
     expect(firstRun.applied).toEqual([
       "0001_initial_schema",
       "0002_better_auth",
-      "0003_applicant_intake"
+      "0003_applicant_intake",
+      "0004_proposal_demo_pipeline"
     ]);
     expect(secondRun.applied).toEqual([]);
     expect(secondRun.skipped).toEqual([
       "0001_initial_schema",
       "0002_better_auth",
-      "0003_applicant_intake"
+      "0003_applicant_intake",
+      "0004_proposal_demo_pipeline"
     ]);
     expect(applied).toEqual([
       { version: "0001_initial_schema" },
       { version: "0002_better_auth" },
-      { version: "0003_applicant_intake" }
+      { version: "0003_applicant_intake" },
+      { version: "0004_proposal_demo_pipeline" }
     ]);
   });
 
@@ -107,7 +110,10 @@ describe.skipIf(!hasTestDatabase)("Postgres integration", () => {
       "files",
       "audit_logs",
       "export_runs",
-      "shift_types"
+      "shift_types",
+      "demo_events",
+      "demo_event_shortlist",
+      "whatsapp_inbound_messages"
     ];
 
     const tableResult = await dbPool().query(

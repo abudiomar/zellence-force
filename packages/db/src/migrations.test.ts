@@ -37,6 +37,7 @@ describe("migration runner", () => {
     expect(result.applied).toContain("0001_initial_schema");
     expect(result.applied).toContain("0002_better_auth");
     expect(result.applied).toContain("0003_applicant_intake");
+    expect(result.applied).toContain("0004_proposal_demo_pipeline");
     expect(result.skipped).toEqual([]);
     expect(client.statements.some((sql) => sql.includes("create table if not exists schema_migrations"))).toBe(true);
   });
@@ -52,12 +53,14 @@ describe("migration runner", () => {
     expect(secondRun.skipped).toEqual([
       "0001_initial_schema",
       "0002_better_auth",
-      "0003_applicant_intake"
+      "0003_applicant_intake",
+      "0004_proposal_demo_pipeline"
     ]);
     expect(applied).toEqual([
       { version: "0001_initial_schema" },
       { version: "0002_better_auth" },
-      { version: "0003_applicant_intake" }
+      { version: "0003_applicant_intake" },
+      { version: "0004_proposal_demo_pipeline" }
     ]);
   });
 });

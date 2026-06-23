@@ -142,10 +142,14 @@ describe("PostgreSQL Phase 2 Adapters", () => {
         matchedPersonId: "person-match"
       })
     ).resolves.toMatchObject({ id: "row-1" });
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("on conflict (tenant_id, source_hash)"),
+      expect.any(Array)
+    );
     await expect(
       applicants.listReviewQueue({ tenantId: "tenant", status: "pending_review" })
     ).resolves.toEqual([
-      {
+      expect.objectContaining({
         id: "row-1",
         sourceRowId: "2",
         status: "pending_review",
@@ -156,7 +160,7 @@ describe("PostgreSQL Phase 2 Adapters", () => {
         errorMessages: [],
         matchedPersonId: "person-match",
         createdAt: "2026-06-12T00:00:00.000Z"
-      }
+      })
     ]);
     await expect(
       applicants.createPersonFromApplicant({
@@ -185,6 +189,189 @@ describe("PostgreSQL Phase 2 Adapters", () => {
       interviewId: "interview-1",
       overallScore: 4.5,
       belowMinimum: false
+    });
+  });
+
+  test("persists proposal demo screening, staff pool, event shortlist, and WhatsApp inbox", async () => {
+    const applicantRow = {
+      id: "row-1",
+      source_row_id: "2",
+      status: "accepted",
+      raw_data: {
+        "Full Name": "Sara Ahmed",
+        Mobile: "+966500000000",
+        City: "Riyadh",
+        Photo: "https://example.com/photo.jpg",
+        CV: "https://example.com/cv.pdf"
+      },
+      mapped_data: {
+        fullName: "Sara Ahmed",
+        phone: "+966500000000",
+        city: "Riyadh",
+        gender: "female",
+        age: "24",
+        photoUrl: "https://example.com/photo.jpg",
+        cvUrl: "https://example.com/cv.pdf"
+      },
+      error_messages: [],
+      matched_person_id: null,
+      created_person_id: "person-1",
+      screening_status: "save_to_staff_pool",
+      screening_notes: "Strong profile",
+      interview_status: "passed",
+      contract_sent: true,
+      contract_status: "signed",
+      presentation_score: "4.0",
+      communication_score: "5.0",
+      english_fluency_score: "4.0",
+      final_score: "4.33",
+      saved_to_staff_at: new Date("2026-06-12T00:00:00.000Z"),
+      saved_for_future_at: null,
+      created_at: new Date("2026-06-12T00:00:00.000Z")
+    };
+    const demoEvent = {
+      id: "demo-event-1",
+      name: "Riyadh Launch",
+      city: "Riyadh",
+      event_date: "2026-07-01",
+      role_name: "Host",
+      needed_headcount: 6,
+      shortlisted: 1,
+      confirmed: 0
+    };
+    const inboundMessage = {
+      id: "message-1",
+      from_phone: "+966500000000",
+      body: "Emergency, I cannot attend",
+      intent: "emergency",
+      is_emergency: true,
+      person_id: "person-1",
+      applicant_row_id: "row-1",
+      matched_name: "Sara Ahmed",
+      received_at: new Date("2026-06-12T00:00:00.000Z")
+    };
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes("update applicant_import_rows") && sql.includes("screening_status")) {
+        return { rows: [applicantRow], rowCount: 1 };
+      }
+      if (sql.includes("update applicant_import_rows") && sql.includes("interview_status")) {
+        return { rows: [applicantRow], rowCount: 1 };
+      }
+      if (sql.includes("insert into persons")) return { rows: [{ id: "person-1" }], rowCount: 1 };
+      if (sql.includes("saved_to_staff_at")) return { rows: [applicantRow], rowCount: 1 };
+      if (sql.includes("from applicant_import_rows") && sql.includes("saved_to_staff_at")) {
+        return { rows: [applicantRow], rowCount: 1 };
+      }
+      if (sql.includes("insert into demo_events")) return { rows: [demoEvent], rowCount: 1 };
+      if (sql.includes("insert into demo_event_shortlist")) return { rows: [], rowCount: 1 };
+      if (sql.includes("from demo_events")) return { rows: [demoEvent], rowCount: 1 };
+      if (sql.includes("insert into whatsapp_inbound_messages")) {
+        return { rows: [inboundMessage], rowCount: 1 };
+      }
+      if (sql.includes("from whatsapp_inbound_messages")) {
+        return { rows: [inboundMessage], rowCount: 1 };
+      }
+      if (sql.includes("find_whatsapp_contact_context")) {
+        return { rows: [applicantRow], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 1 };
+    });
+    const applicants = createPgApplicantImportRepository({ query });
+
+    await expect(
+      applicants.updateScreening({
+        tenantId: "tenant",
+        actorUserId: "hr",
+        rowId: "row-1",
+        screeningStatus: "save_to_staff_pool",
+        notes: "Strong profile"
+      })
+    ).resolves.toMatchObject({ screeningStatus: "save_to_staff_pool" });
+
+    await expect(
+      applicants.updateInterviewPipeline({
+        tenantId: "tenant",
+        actorUserId: "hr",
+        rowId: "row-1",
+        interviewStatus: "passed",
+        contractSent: true,
+        contractStatus: "signed",
+        presentationScore: 4,
+        communicationScore: 5,
+        englishFluencyScore: 4,
+        finalScore: 4.33
+      })
+    ).resolves.toMatchObject({ finalScore: 4.33, contractStatus: "signed" });
+
+    await expect(
+      applicants.saveToStaffPool({
+        tenantId: "tenant",
+        actorUserId: "hr",
+        rowId: "row-1",
+        mode: "staff"
+      })
+    ).resolves.toMatchObject({ personId: "person-1" });
+
+    await expect(
+      applicants.listStaffPool({
+        tenantId: "tenant",
+        filter: { city: "Riyadh", minFinalScore: 4, hasCv: true }
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({
+        personId: "person-1",
+        fullName: "Sara Ahmed",
+        savedToStaff: true,
+        finalScore: 4.33
+      })
+    ]);
+
+    await expect(
+      applicants.createDemoEvent({
+        tenantId: "tenant",
+        actorUserId: "hr",
+        event: {
+          name: "Riyadh Launch",
+          city: "Riyadh",
+          eventDate: "2026-07-01",
+          roleName: "Host",
+          neededHeadcount: 6
+        }
+      })
+    ).resolves.toMatchObject({ shortlisted: 1, neededHeadcount: 6 });
+
+    await expect(
+      applicants.addCandidateToDemoEvent({
+        tenantId: "tenant",
+        actorUserId: "hr",
+        eventId: "demo-event-1",
+        candidate: { applicantRowId: "row-1", personId: "person-1" }
+      })
+    ).resolves.toMatchObject({ id: "demo-event-1", shortlisted: 1 });
+
+    await expect(
+      applicants.recordWhatsAppInbound({
+        tenantId: "tenant",
+        waMessageId: "wamid.demo",
+        fromPhone: "+966500000000",
+        body: "Emergency, I cannot attend",
+        payload: { demo: true },
+        intent: "emergency",
+        isEmergency: true
+      })
+    ).resolves.toMatchObject({ intent: "emergency", matchedName: "Sara Ahmed" });
+
+    await expect(applicants.listWhatsAppInbox("tenant")).resolves.toEqual([
+      expect.objectContaining({ isEmergency: true, matchedName: "Sara Ahmed" })
+    ]);
+    await expect(
+      applicants.findWhatsAppContactContext("tenant", "+966500000000")
+    ).resolves.toMatchObject({
+      applicantRowId: "row-1",
+      fullName: "Sara Ahmed",
+      interviewStatus: "passed",
+      contractStatus: "signed",
+      finalScore: 4.33
     });
   });
 });

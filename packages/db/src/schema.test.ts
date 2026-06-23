@@ -11,6 +11,11 @@ const authMigrationSql = readFileSync(
   join(process.cwd(), "packages/db/migrations/0002_better_auth.sql"),
   "utf8"
 );
+const proposalDemoMigrationSql = readFileSync(
+  join(process.cwd(), "packages/db/migrations/0004_proposal_demo_pipeline.sql"),
+  "utf8"
+);
+const schemaSql = `${migrationSql}\n${proposalDemoMigrationSql}`;
 
 const requiredTables = [
   "tenant_settings",
@@ -22,13 +27,16 @@ const requiredTables = [
   "files",
   "audit_logs",
   "export_runs",
-  "shift_types"
+  "shift_types",
+  "demo_events",
+  "demo_event_shortlist",
+  "whatsapp_inbound_messages"
 ];
 
 describe("MVP schema migration", () => {
   test("contains Phase 1 required schema gap tables", () => {
     for (const table of requiredTables) {
-      expect(migrationSql).toContain(`create table if not exists ${table}`);
+      expect(schemaSql).toContain(`create table if not exists ${table}`);
     }
   });
 

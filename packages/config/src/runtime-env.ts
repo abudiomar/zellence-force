@@ -18,6 +18,7 @@ export const ENV_VAR_NAMES = [
   "DB_SSL_MODE",
   "GOOGLE_CLIENT_EMAIL",
   "GOOGLE_PRIVATE_KEY",
+  "GOOGLE_SERVICE_ACCOUNT_JSON_PATH",
   "GOOGLE_PROJECT_ID",
   "GOOGLE_APPLICANT_SHEET_ID",
   "GOOGLE_APPLICANT_SHEET_RANGE",
@@ -51,8 +52,7 @@ const requiredEnv = [
   "API_URL",
   "DATABASE_URL",
   "BETTER_AUTH_SECRET",
-  "BETTER_AUTH_URL",
-  "TOKEN_SIGNING_SECRET"
+  "BETTER_AUTH_URL"
 ] as const satisfies readonly EnvVarName[];
 
 const runtimeEnvSchema = z.object({
@@ -69,10 +69,14 @@ const runtimeEnvSchema = z.object({
   AUTH_SESSION_UPDATE_AGE: z.coerce.number().int().positive().default(86400),
   AUTH_PASSWORD_MIN_LENGTH: z.coerce.number().int().min(8).default(8),
   AUTH_PASSWORD_MAX_LENGTH: z.coerce.number().int().max(256).default(128),
-  TOKEN_SIGNING_SECRET: z.string().min(32),
+  TOKEN_SIGNING_SECRET: z
+    .string()
+    .min(32)
+    .default("unused_token_link_secret_32_chars_min"),
   DB_SSL_MODE: z.enum(["disable", "prefer", "require"]).default("prefer"),
   GOOGLE_CLIENT_EMAIL: z.string().optional(),
   GOOGLE_PRIVATE_KEY: z.string().optional(),
+  GOOGLE_SERVICE_ACCOUNT_JSON_PATH: z.string().optional(),
   GOOGLE_PROJECT_ID: z.string().optional(),
   GOOGLE_APPLICANT_SHEET_ID: z.string().optional(),
   GOOGLE_APPLICANT_SHEET_RANGE: z.string().optional(),

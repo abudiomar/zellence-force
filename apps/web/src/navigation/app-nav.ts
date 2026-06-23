@@ -40,6 +40,14 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
     enabled: true
   },
   {
+    id: "settings-users",
+    href: "/settings/users",
+    labelKey: "app.users",
+    icon: Settings,
+    requiredPermission: PERMISSIONS.MANAGE_USERS,
+    enabled: true
+  },
+  {
     id: "future-events",
     href: "/events",
     labelKey: "app.events",

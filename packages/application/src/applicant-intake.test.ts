@@ -22,6 +22,25 @@ const hrActor: AuthenticatedUser = {
   isActive: true
 };
 
+function queueItem() {
+  return {
+    id: "row-1",
+    sourceRowId: "2",
+    status: "pending_review" as const,
+    fullName: "Sara Ahmed",
+    phone: "+966500000000",
+    email: "sara@example.com",
+    city: "Riyadh",
+    errorMessages: [],
+    matchedPersonId: null,
+    screeningStatus: "needs_review" as const,
+    interviewStatus: "not_scheduled" as const,
+    contractSent: false,
+    contractStatus: "not_sent" as const,
+    createdAt: "2026-06-12T00:00:00.000Z"
+  };
+}
+
 function applicantRepository(overrides: Partial<ApplicantImportRepository> = {}): ApplicantImportRepository {
   return {
     findExistingPersonByPhone: vi.fn(async () => null),
@@ -29,21 +48,48 @@ function applicantRepository(overrides: Partial<ApplicantImportRepository> = {})
     upsertImportRow: vi.fn(async (input) => ({ id: `row-${input.sourceRowId}`, ...input })),
     finishImportRun: vi.fn(async () => undefined),
     listReviewQueue: vi.fn(async () => []),
-    findImportRow: vi.fn(async () => ({
-      id: "row-1",
-      sourceRowId: "2",
-      status: "pending_review" as const,
-      fullName: "Sara Ahmed",
-      phone: "+966500000000",
-      email: "sara@example.com",
-      city: "Riyadh",
-      errorMessages: [],
-      matchedPersonId: null,
-      createdAt: "2026-06-12T00:00:00.000Z"
-    })),
+    findImportRow: vi.fn(async () => queueItem()),
     createPersonFromApplicant: vi.fn(async () => "person-1"),
     mergeApplicantIntoPerson: vi.fn(async () => "person-existing"),
     updateImportRowDecision: vi.fn(async () => undefined),
+    updateScreening: vi.fn(async () => queueItem()),
+    updateInterviewPipeline: vi.fn(async () => queueItem()),
+    saveToStaffPool: vi.fn(async () => ({ personId: "person-1", row: queueItem() })),
+    listStaffPool: vi.fn(async () => []),
+    createDemoEvent: vi.fn(async () => ({
+      id: "demo-event-1",
+      name: "Demo Event",
+      city: "Riyadh",
+      eventDate: "2026-07-01",
+      roleName: "Host",
+      neededHeadcount: 5,
+      shortlisted: 0,
+      confirmed: 0
+    })),
+    listDemoEvents: vi.fn(async () => []),
+    addCandidateToDemoEvent: vi.fn(async () => ({
+      id: "demo-event-1",
+      name: "Demo Event",
+      city: "Riyadh",
+      eventDate: "2026-07-01",
+      roleName: "Host",
+      neededHeadcount: 5,
+      shortlisted: 1,
+      confirmed: 0
+    })),
+    listWhatsAppInbox: vi.fn(async () => []),
+    recordWhatsAppInbound: vi.fn(async () => ({
+      id: "message-1",
+      fromPhone: "+966500000000",
+      body: "Status",
+      intent: "current_status" as const,
+      isEmergency: false,
+      personId: "person-1",
+      applicantRowId: "row-1",
+      matchedName: "Sara Ahmed",
+      receivedAt: "2026-06-12T00:00:00.000Z"
+    })),
+    findWhatsAppContactContext: vi.fn(async () => null),
     scheduleInterview: vi.fn(async () => "interview-1"),
     recordInterviewScore: vi.fn(async () => ({
       interviewId: "interview-1",
