@@ -888,6 +888,20 @@ export function createPgBootstrapRepository(client: DbClient): BootstrapReposito
       return (result.rows[0] as { id?: string } | undefined)?.id ?? null;
     },
 
+    async ensureTenant(input) {
+      const result = await client.query(
+        `
+          insert into tenants (name, slug)
+          values ($1, $2)
+          on conflict (slug) do update
+            set name = excluded.name
+          returning id
+        `,
+        [input.name, input.slug]
+      );
+      return (result.rows[0] as { id: string }).id;
+    },
+
     async countUsers(tenantId) {
       const result = await client.query(
         "select count(*)::integer as count from users where tenant_id = $1",

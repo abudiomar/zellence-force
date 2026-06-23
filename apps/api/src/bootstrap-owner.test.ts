@@ -6,12 +6,14 @@ describe("owner bootstrap CLI", () => {
     expect(
       parseBootstrapOwnerArgs([
         "--tenant-slug=mag-events",
+        "--tenant-name=MAG Events",
         "--full-name=Primary Owner",
         "--email=owner@example.com",
         "--password=password123"
       ])
     ).toEqual({
       tenantSlug: "mag-events",
+      tenantName: "MAG Events",
       fullName: "Primary Owner",
       email: "owner@example.com",
       password: "password123"

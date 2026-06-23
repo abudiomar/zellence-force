@@ -91,6 +91,7 @@ The API bootstrap command runs migrations before creating the first owner.
 docker compose -f docker-compose.production.yml run --rm api \
   bun run bootstrap:owner \
   --tenant-slug=mag-events \
+  --tenant-name="MAG Events" \
   --full-name="abdulla omar" \
   --email=<owner-email> \
   --password='abudi123'

@@ -12,6 +12,7 @@ import { loadApiEnv } from "./config/runtime-env";
 
 type BootstrapOwnerArgs = {
   tenantSlug: string;
+  tenantName?: string;
   fullName: string;
   email: string;
   password: string;
@@ -28,6 +29,7 @@ export function parseBootstrapOwnerArgs(args: string[]): BootstrapOwnerArgs {
   );
   const result = {
     tenantSlug: values.get("--tenant-slug")?.trim(),
+    tenantName: values.get("--tenant-name")?.trim(),
     fullName: values.get("--full-name")?.trim(),
     email: values.get("--email")?.trim(),
     password: values.get("--password")

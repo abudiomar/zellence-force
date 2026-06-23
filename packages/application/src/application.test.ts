@@ -194,6 +194,7 @@ describe("Phase 2 application Actions", () => {
   test("bootstraps only an empty tenant with an owner role", async () => {
     const bootstrap: BootstrapRepository = {
       findTenantIdBySlug: vi.fn(async () => "tenant-a"),
+      ensureTenant: vi.fn(async () => "tenant-a"),
       countUsers: vi.fn(async () => 0),
       ensureTenantSettings: vi.fn(async () => undefined)
     };
@@ -208,6 +209,7 @@ describe("Phase 2 application Actions", () => {
         { bootstrap, identity, users },
         {
           tenantSlug: "mag-events",
+          tenantName: "MAG Events",
           fullName: "Owner",
           email: "owner@example.com",
           password: "password123"
@@ -224,11 +226,43 @@ describe("Phase 2 application Actions", () => {
         },
         {
           tenantSlug: "mag-events",
+          tenantName: "MAG Events",
           fullName: "Owner",
           email: "owner@example.com",
           password: "password123"
         }
       )
     ).rejects.toMatchObject({ code: "TENANT_ALREADY_BOOTSTRAPPED" });
+  });
+
+  test("creates the tenant during owner bootstrap when a tenant name is supplied", async () => {
+    const bootstrap: BootstrapRepository = {
+      findTenantIdBySlug: vi.fn(async () => null),
+      ensureTenant: vi.fn(async () => "tenant-created"),
+      countUsers: vi.fn(async () => 0),
+      ensureTenantSettings: vi.fn(async () => undefined)
+    };
+    const identity: IdentityAdmin = {
+      createIdentity: vi.fn(async () => ({ authUserId: "auth-owner" })),
+      deleteIdentity: vi.fn(async () => undefined)
+    };
+
+    await expect(
+      bootstrapOwner(
+        { bootstrap, identity, users: userRepository() },
+        {
+          tenantSlug: "mag-events",
+          tenantName: "MAG Events",
+          fullName: "Owner",
+          email: "owner@example.com",
+          password: "password123"
+        }
+      )
+    ).resolves.toMatchObject({ role: "owner" });
+
+    expect(bootstrap.ensureTenant).toHaveBeenCalledWith({
+      name: "MAG Events",
+      slug: "mag-events"
+    });
   });
 });

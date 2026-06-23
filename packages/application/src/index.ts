@@ -110,6 +110,7 @@ export interface SettingsRepository {
 
 export interface BootstrapRepository {
   findTenantIdBySlug(slug: string): Promise<string | null>;
+  ensureTenant(input: { name: string; slug: string }): Promise<string>;
   countUsers(tenantId: string): Promise<number>;
   ensureTenantSettings(tenantId: string): Promise<void>;
 }
@@ -937,12 +938,21 @@ export async function bootstrapOwner(
   },
   rawInput: {
     tenantSlug: string;
+    tenantName?: string;
     fullName: string;
     email: string;
     password: string;
   }
 ): Promise<AuthenticatedUser> {
-  const tenantId = await deps.bootstrap.findTenantIdBySlug(rawInput.tenantSlug.trim());
+  const tenantSlug = rawInput.tenantSlug.trim();
+  const tenantId =
+    (await deps.bootstrap.findTenantIdBySlug(tenantSlug)) ??
+    (rawInput.tenantName
+      ? await deps.bootstrap.ensureTenant({
+          name: rawInput.tenantName.trim(),
+          slug: tenantSlug
+        })
+      : null);
   if (!tenantId) {
     throw new ApplicationError("TENANT_NOT_FOUND", "Tenant not found", 404);
   }

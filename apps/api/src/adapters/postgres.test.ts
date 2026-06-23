@@ -67,16 +67,21 @@ describe("PostgreSQL Phase 2 Adapters", () => {
 
   test("provides one-time tenant bootstrap operations", async () => {
     const query = vi.fn(async (sql: string) => ({
-      rows: sql.includes("select id from tenants")
-        ? [{ id: "tenant" }]
-        : sql.includes("count(*)")
-          ? [{ count: 0 }]
-          : [],
+      rows: sql.includes("insert into tenants")
+        ? [{ id: "tenant-created" }]
+        : sql.includes("select id from tenants")
+          ? [{ id: "tenant" }]
+          : sql.includes("count(*)")
+            ? [{ count: 0 }]
+            : [],
       rowCount: 1
     }));
     const bootstrap = createPgBootstrapRepository({ query });
 
     await expect(bootstrap.findTenantIdBySlug("mag-events")).resolves.toBe("tenant");
+    await expect(
+      bootstrap.ensureTenant({ name: "MAG Events", slug: "mag-events" })
+    ).resolves.toBe("tenant-created");
     await expect(bootstrap.countUsers("tenant")).resolves.toBe(0);
     await bootstrap.ensureTenantSettings("tenant");
 
