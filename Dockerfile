@@ -1,6 +1,11 @@
-FROM oven/bun:1.3.2 AS builder
+FROM oven/bun:1.3.2-slim AS bun-runtime
+
+FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
+
+COPY --from=bun-runtime /usr/local/bin/bun /usr/local/bin/bun
+RUN ln -s /usr/local/bin/bun /usr/local/bin/bunx
 
 COPY package.json bun.lock turbo.json tsconfig.json tsconfig.base.json ./
 COPY apps/api/package.json apps/api/package.json
@@ -20,7 +25,8 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL=https://force.zellence.dev
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
-RUN bun run build
+RUN bunx turbo build --filter='!@zellforce/web'
+RUN cd apps/web && node node_modules/next/dist/bin/next build
 
 FROM oven/bun:1.3.2-slim AS api
 
@@ -32,7 +38,7 @@ COPY --from=builder /app /app
 EXPOSE 4000
 CMD ["bun", "run", "apps/api/src/server.ts"]
 
-FROM node:22-alpine AS web
+FROM node:22-bookworm-slim AS web
 
 WORKDIR /app
 ENV NODE_ENV=production
