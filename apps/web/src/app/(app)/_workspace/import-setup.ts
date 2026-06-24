@@ -1,4 +1,4 @@
-import type { GoogleSheetMapping } from "@zellforce/contracts";
+import type { GoogleSheetMapping, SheetTab } from "@zellforce/contracts";
 
 const columnAliases: Record<keyof GoogleSheetMapping, string[]> = {
   fullName: ["full name", "name", "candidate name", "applicant name", "الاسم", "الاسم الكامل"],
@@ -39,11 +39,27 @@ export function parseGoogleSheetReference(value: string): string {
   return match?.[1] ?? trimmed;
 }
 
+export function parseGoogleSheetGid(value: string): string {
+  const trimmed = value.trim();
+  const queryMatch = /[?&]gid=([^&#]+)/.exec(trimmed);
+  const hashMatch = /[#&]gid=([^&#]+)/.exec(trimmed);
+  return queryMatch?.[1] ?? hashMatch?.[1] ?? "";
+}
+
 export function buildGoogleSheetRange(tabName: string): string {
   const trimmed = tabName.trim();
   if (!trimmed) return "A:Z";
   const escaped = trimmed.replaceAll("'", "''");
   return /\s/.test(trimmed) ? `'${escaped}'!A:Z` : `${escaped}!A:Z`;
+}
+
+export function chooseDefaultSheetTab(tabs: SheetTab[]): string {
+  return [...tabs].sort((left, right) => left.index - right.index)[0]?.title ?? "";
+}
+
+export function chooseInitialSheetTab(tabs: SheetTab[], gid: string): string {
+  const matchingTab = tabs.find((tab) => tab.id === gid);
+  return matchingTab?.title ?? chooseDefaultSheetTab(tabs);
 }
 
 export function autoMapGoogleSheetColumns(headers: string[]): GoogleSheetMapping {

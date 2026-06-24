@@ -115,6 +115,26 @@ export const RUN_APPLICANT_IMPORT_INPUT_SCHEMA = z.object({
 
 export type RunApplicantImportInput = z.infer<typeof RUN_APPLICANT_IMPORT_INPUT_SCHEMA>;
 
+export const LIST_SHEET_TABS_INPUT_SCHEMA = z.object({
+  sourceId: z.string().trim().min(1)
+});
+
+export type ListSheetTabsInput = z.infer<typeof LIST_SHEET_TABS_INPUT_SCHEMA>;
+
+export const SHEET_TAB_SCHEMA = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  index: z.number().int().nonnegative()
+});
+
+export type SheetTab = z.infer<typeof SHEET_TAB_SCHEMA>;
+
+export const SHEET_TABS_SCHEMA = z.object({
+  tabs: z.array(SHEET_TAB_SCHEMA)
+});
+
+export type SheetTabs = z.infer<typeof SHEET_TABS_SCHEMA>;
+
 export const APPLICANT_IMPORT_MAPPED_DATA_SCHEMA = z.object({
   fullName: z.string().trim().min(1),
   phone: z.string().trim().min(1),

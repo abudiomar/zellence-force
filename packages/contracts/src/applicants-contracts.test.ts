@@ -4,8 +4,10 @@ import {
   APPLICANT_IMPORT_ROW_SCHEMA,
   APPLICANT_REVIEW_QUEUE_ITEM_SCHEMA,
   GOOGLE_SHEET_MAPPING_SCHEMA,
+  LIST_SHEET_TABS_INPUT_SCHEMA,
   RUN_APPLICANT_IMPORT_INPUT_SCHEMA,
   SCHEDULE_INTERVIEW_INPUT_SCHEMA,
+  SHEET_TABS_SCHEMA,
   RECORD_INTERVIEW_SCORE_INPUT_SCHEMA
 } from "./index";
 
@@ -27,6 +29,28 @@ describe("Phase 4 applicant contracts", () => {
         mapping: { fullName: "Full Name", phone: "Mobile" }
       })
     ).not.toThrow();
+  });
+
+  test("validates applicant Sheet tab discovery DTOs", () => {
+    expect(() =>
+      LIST_SHEET_TABS_INPUT_SCHEMA.parse({
+        sourceId: "sheet-123"
+      })
+    ).not.toThrow();
+
+    expect(
+      SHEET_TABS_SCHEMA.parse({
+        tabs: [
+          { id: "0", title: "Form Responses 1", index: 0 },
+          { id: "123", title: "Interview", index: 1 }
+        ]
+      })
+    ).toEqual({
+      tabs: [
+        { id: "0", title: "Form Responses 1", index: 0 },
+        { id: "123", title: "Interview", index: 1 }
+      ]
+    });
   });
 
   test("rejects applicant import rows without required mapped fields", () => {

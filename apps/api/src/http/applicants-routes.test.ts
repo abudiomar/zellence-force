@@ -262,6 +262,10 @@ function app(options: {
     phaseFour: {
       applicants: options.applicants ?? baseApplicants(),
       sheet: options.sheet ?? {
+        listTabs: vi.fn(async () => [
+          { id: "0", title: "Form Responses 1", index: 0 },
+          { id: "123", title: "Interview", index: 1 }
+        ]),
         readRows: vi.fn(async () => [
           { rowId: "2", values: { "Full Name": "Sara Ahmed", Mobile: "+966500000000", City: "Riyadh" } }
         ])
@@ -329,6 +333,15 @@ describe("Applicant API routes", () => {
   test("previews sheet headers and records screening/interview pipeline changes", async () => {
     const applicants = baseApplicants();
     const server = app({ applicants });
+
+    const tabs = await request(server).post("/api/applicants/sheet-tabs").send({
+      sourceId: "sheet-123"
+    });
+    expect(tabs.status).toBe(200);
+    expect(tabs.body.tabs).toEqual([
+      { id: "0", title: "Form Responses 1", index: 0 },
+      { id: "123", title: "Interview", index: 1 }
+    ]);
 
     const preview = await request(server).post("/api/applicants/header-preview").send({
       sourceId: "sheet-123",

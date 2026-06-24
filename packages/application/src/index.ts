@@ -2,6 +2,7 @@ import {
   APPLICANT_DECISION_INPUT_SCHEMA,
   ADD_SHORTLIST_INPUT_SCHEMA,
   DEMO_EVENT_INPUT_SCHEMA,
+  LIST_SHEET_TABS_INPUT_SCHEMA,
   RECORD_INTERVIEW_SCORE_INPUT_SCHEMA,
   PREVIEW_SHEET_HEADERS_INPUT_SCHEMA,
   RUN_APPLICANT_IMPORT_INPUT_SCHEMA,
@@ -24,6 +25,8 @@ import {
   type RecordInterviewScoreInput,
   type RunApplicantImportInput,
   type ScheduleInterviewInput,
+  type SheetTab,
+  type SheetTabs,
   type SheetHeaderPreview,
   type StaffPoolFilter,
   type StaffPoolItem,
@@ -121,6 +124,9 @@ export type ApplicantSheetRow = {
 };
 
 export interface ApplicantSheetReader {
+  listTabs(input: {
+    sourceId: string;
+  }): Promise<SheetTab[]>;
   readRows(input: {
     sourceId: string;
     sourceRange: string;
@@ -528,6 +534,16 @@ export async function previewApplicantSheetHeaders(
     headers,
     sampleRows: rows.slice(0, 3).map((row) => row.values)
   };
+}
+
+export async function listApplicantSheetTabs(
+  deps: { sheet: ApplicantSheetReader },
+  actor: RequestActor,
+  rawInput: { sourceId: string }
+): Promise<SheetTabs> {
+  authorize(actor, PERMISSIONS.MANAGE_APPLICANT_IMPORT);
+  const input = LIST_SHEET_TABS_INPUT_SCHEMA.parse(rawInput);
+  return { tabs: await deps.sheet.listTabs(input) };
 }
 
 export async function listApplicantReviewQueue(

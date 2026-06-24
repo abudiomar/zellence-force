@@ -23,6 +23,50 @@ export function createGoogleSheetsApplicantAdapter(input: {
   const fetchImpl = input.fetchImpl ?? fetch;
   const tokenProvider = createGoogleSheetsTokenProvider(input, fetchImpl);
   return {
+    async listTabs(args) {
+      if (args.sourceId === "local-demo") {
+        return [{ id: "0", title: "Form Responses 1", index: 0 }];
+      }
+
+      const accessToken = await tokenProvider();
+      const url = new URL(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(args.sourceId)}`
+      );
+      url.searchParams.set("fields", "sheets.properties(sheetId,title,index)");
+      const response = await fetchImpl(url.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (!response.ok) {
+        throw new GoogleSheetsAdapterError(
+          "GOOGLE_SHEETS_TABS_FAILED",
+          "Unable to list Google Sheet tabs",
+          response.status
+        );
+      }
+
+      const payload = await response.json() as {
+        sheets?: Array<{
+          properties?: {
+            sheetId?: number;
+            title?: string;
+            index?: number;
+          };
+        }>;
+      };
+      return (payload.sheets ?? [])
+        .map((sheet) => sheet.properties)
+        .filter((properties): properties is { sheetId: number; title: string; index: number } =>
+          typeof properties?.sheetId === "number" &&
+          typeof properties.title === "string" &&
+          typeof properties.index === "number"
+        )
+        .map((properties) => ({
+          id: String(properties.sheetId),
+          title: properties.title,
+          index: properties.index
+        }))
+        .sort((left, right) => left.index - right.index);
+    },
     async readRows(args) {
       if (args.sourceId === "local-demo") {
         return [

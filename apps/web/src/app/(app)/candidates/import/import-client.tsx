@@ -1,20 +1,23 @@
 "use client";
 
 import React from "react";
-import type { GoogleSheetMapping } from "@zellforce/contracts";
+import type { GoogleSheetMapping, SheetTab } from "@zellforce/contracts";
 import { Clipboard, FileText, Filter, RefreshCw, Search, Sheet } from "lucide-react";
 import { AlertBanner } from "@zellforce/ui/components/alert";
 import { Button } from "@zellforce/ui/components/button";
 import { TextInput } from "@zellforce/ui/components/input";
 import { Field } from "@zellforce/ui/components/label";
 import { Select } from "@zellforce/ui/components/select";
-import { previewApplicantSheetHeaders, runApplicantImport } from "../../_workspace/api";
+import { listApplicantSheetTabs, previewApplicantSheetHeaders, runApplicantImport } from "../../_workspace/api";
 import { EmptyLine, PanelHeader, WorkspaceFeedback, WorkspaceHeader } from "../../_workspace/components";
 import {
   applicantMappingFields,
   autoMapGoogleSheetColumns,
   buildGoogleSheetRange,
+  chooseDefaultSheetTab,
+  chooseInitialSheetTab,
   getImportReadiness,
+  parseGoogleSheetGid,
   parseGoogleSheetReference
 } from "../../_workspace/import-setup";
 import { useWorkspaceData } from "../../_workspace/use-workspace-data";
@@ -27,15 +30,44 @@ export function ImportClient() {
   // busy/status/error machinery, so it opts into no resources.
   const { busy, status, error, runBusy } = useWorkspaceData({});
   const [sheetReference, setSheetReference] = React.useState("local-demo");
-  const [tabName, setTabName] = React.useState("");
+  const [tabs, setTabs] = React.useState<SheetTab[]>([]);
+  const [selectedTab, setSelectedTab] = React.useState("");
   const [mapping, setMapping] = React.useState<GoogleSheetMapping>(emptyMapping);
   const [headers, setHeaders] = React.useState<string[]>([]);
   const [sampleRows, setSampleRows] = React.useState<Array<Record<string, unknown>>>([]);
   const [showMapping, setShowMapping] = React.useState(false);
   const sourceId = parseGoogleSheetReference(sheetReference);
-  const sourceRange = sourceId === "local-demo" ? "Form Responses 1!A:Z" : buildGoogleSheetRange(tabName);
+  const sheetGid = parseGoogleSheetGid(sheetReference);
+  const sourceRange = sourceId === "local-demo" ? "Form Responses 1!A:Z" : buildGoogleSheetRange(selectedTab);
   const readiness = getImportReadiness(mapping);
   const mappedSample = sampleRows[0] ? createMappedPreview(sampleRows[0], mapping) : null;
+
+  async function loadTabs() {
+    const result = await listApplicantSheetTabs({ sourceId });
+    const sortedTabs = [...result.tabs].sort((left, right) => left.index - right.index);
+    const nextSelectedTab = selectedTab || chooseInitialSheetTab(sortedTabs, sheetGid);
+    setTabs(sortedTabs);
+    setSelectedTab(nextSelectedTab);
+    return { tabs: sortedTabs, selectedTab: nextSelectedTab };
+  }
+
+  async function previewColumnsForTab(tabName: string) {
+    const preview = await previewApplicantSheetHeaders({
+      sourceId,
+      sourceRange: sourceId === "local-demo" ? "Form Responses 1!A:Z" : buildGoogleSheetRange(tabName)
+    });
+    const nextMapping = { ...mapping, ...autoMapGoogleSheetColumns(preview.headers) };
+    setMapping(nextMapping);
+    setHeaders(preview.headers);
+    setSampleRows(preview.sampleRows);
+    return `${preview.headers.length} columns detected`;
+  }
+
+  async function detectColumns() {
+    const tabState = tabs.length === 0 ? await loadTabs() : { tabs, selectedTab };
+    const tabForPreview = tabState.selectedTab || chooseDefaultSheetTab(tabState.tabs);
+    return previewColumnsForTab(tabForPreview);
+  }
 
   return (
     <div className="candidate-workspace">
@@ -74,27 +106,35 @@ export function ImportClient() {
             <Field label="Google Sheet link">
               <TextInput
                 value={sheetReference}
-                onChange={(event) => setSheetReference(event.currentTarget.value)}
+                onChange={(event) => {
+                  setSheetReference(event.currentTarget.value);
+                  setTabs([]);
+                  setSelectedTab("");
+                  setHeaders([]);
+                  setSampleRows([]);
+                }}
                 placeholder="Paste the Sheet link"
               />
             </Field>
             <Field label="Applicant tab">
-              <TextInput
-                value={tabName}
-                onChange={(event) => setTabName(event.currentTarget.value)}
-                placeholder="Leave blank to use the first tab"
-              />
+              <Select
+                value={selectedTab}
+                onChange={(event) => {
+                  const nextTab = event.currentTarget.value;
+                  setSelectedTab(nextTab);
+                  void runBusy(() => previewColumnsForTab(nextTab));
+                }}
+                disabled={tabs.length === 0}
+              >
+                {tabs.length === 0 ? <option value="">Detected from the Sheet link</option> : null}
+                {tabs.map((tab) => (
+                  <option key={tab.id} value={tab.title}>{tab.title}</option>
+                ))}
+              </Select>
             </Field>
           </div>
           <div className="candidate-actions">
-            <Button type="button" variant="secondary" loading={busy} onClick={() => void runBusy(async () => {
-              const preview = await previewApplicantSheetHeaders({ sourceId, sourceRange });
-              const nextMapping = { ...mapping, ...autoMapGoogleSheetColumns(preview.headers) };
-              setMapping(nextMapping);
-              setHeaders(preview.headers);
-              setSampleRows(preview.sampleRows);
-              return `${preview.headers.length} columns detected`;
-            })}>
+            <Button type="button" variant="secondary" loading={busy} onClick={() => void runBusy(detectColumns)}>
               <Search aria-hidden />Detect columns
             </Button>
             <Button type="button" loading={busy} onClick={() => void runBusy(async () => {

@@ -7,6 +7,7 @@ import {
   createInternalUser,
   getTenantSettings,
   importApplicantRows,
+  listApplicantSheetTabs,
   linkUserToPerson,
   listApplicantReviewQueue,
   listDemoEvents,
@@ -178,6 +179,20 @@ export function registerRoutes(
     try {
       res.json(
         await previewApplicantSheetHeaders(
+          { sheet: applicantsDeps.sheet },
+          (req as ActorRequest).actor,
+          req.body
+        )
+      );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/applicants/sheet-tabs", options.requireActor, async (req, res, next) => {
+    try {
+      res.json(
+        await listApplicantSheetTabs(
           { sheet: applicantsDeps.sheet },
           (req as ActorRequest).actor,
           req.body

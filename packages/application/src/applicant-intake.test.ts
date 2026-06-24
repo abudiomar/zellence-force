@@ -5,6 +5,7 @@ import {
   decideApplicantImportRow,
   importApplicantRows,
   listApplicantReviewQueue,
+  listApplicantSheetTabs,
   recordInterviewScore,
   scheduleInterview,
   type ApplicantImportRepository,
@@ -104,6 +105,7 @@ function applicantRepository(overrides: Partial<ApplicantImportRepository> = {})
 describe("Applicant Intake Import Module and Actions", () => {
   test("imports valid rows, marks missing phone as error, and keeps source hash idempotency", async () => {
     const sheet: ApplicantSheetReader = {
+      listTabs: vi.fn(async () => []),
       readRows: vi.fn(async () => [
         { rowId: "2", values: { "Full Name": "Sara Ahmed", Mobile: "+966500000000", City: "Riyadh" } },
         { rowId: "3", values: { "Full Name": "No Phone", Mobile: "", City: "Jeddah" } }
@@ -155,7 +157,10 @@ describe("Applicant Intake Import Module and Actions", () => {
       importApplicantRows(
         {
           applicants: applicantRepository(),
-          sheet: { readRows: vi.fn(async () => []) }
+          sheet: {
+            listTabs: vi.fn(async () => []),
+            readRows: vi.fn(async () => [])
+          }
         },
         viewer,
         {
@@ -169,6 +174,26 @@ describe("Applicant Intake Import Module and Actions", () => {
     await expect(
       listApplicantReviewQueue({ applicants: applicantRepository() }, viewer, {})
     ).rejects.toThrow(ApplicationError);
+  });
+
+  test("lists applicant Sheet tabs for authorized HR users", async () => {
+    const sheet: ApplicantSheetReader = {
+      readRows: vi.fn(async () => []),
+      listTabs: vi.fn(async () => [
+        { id: "0", title: "Form Responses 1", index: 0 },
+        { id: "123", title: "Interview", index: 1 }
+      ])
+    };
+
+    await expect(
+      listApplicantSheetTabs({ sheet }, hrActor, { sourceId: "sheet-123" })
+    ).resolves.toEqual({
+      tabs: [
+        { id: "0", title: "Form Responses 1", index: 0 },
+        { id: "123", title: "Interview", index: 1 }
+      ]
+    });
+    expect(sheet.listTabs).toHaveBeenCalledWith({ sourceId: "sheet-123" });
   });
 
   test("accepts, merges, rejects, defers applicant rows and records audit", async () => {

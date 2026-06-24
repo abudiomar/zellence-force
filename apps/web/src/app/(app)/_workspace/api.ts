@@ -9,6 +9,7 @@ import type {
   RunApplicantImportInput,
   ScheduleInterviewInput,
   SheetHeaderPreview,
+  SheetTabs,
   StaffPoolFilter,
   StaffPoolItem,
   UpdateInterviewPipelineInput,
@@ -54,6 +55,21 @@ export async function previewApplicantSheetHeaders(input: {
     throw new Error("Unable to preview applicant sheet headers");
   }
   return response.json() as Promise<SheetHeaderPreview>;
+}
+
+export async function listApplicantSheetTabs(input: {
+  sourceId: string;
+}): Promise<SheetTabs> {
+  const response = await fetch(`${getPublicEnv().NEXT_PUBLIC_API_URL}/api/applicants/sheet-tabs`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input)
+  });
+  if (!response.ok) {
+    throw new Error("Unable to list applicant sheet tabs");
+  }
+  return response.json() as Promise<SheetTabs>;
 }
 
 export async function decideApplicant(rowId: string, input: ApplicantDecisionInput) {
