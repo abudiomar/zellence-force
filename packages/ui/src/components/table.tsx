@@ -117,9 +117,9 @@ export function SpreadsheetGrid<T>({
                   key={column.id}
                   className={cn(
                     column.sticky && "sticky start-0 bg-[hsl(var(--card))]",
-                    column.state === "dirty" && "bg-amber-50",
-                    column.state === "error" && "bg-red-50",
-                    column.state === "locked" && "bg-slate-100"
+                    column.state === "dirty" && "bg-amber-50 dark:bg-amber-950/30",
+                    column.state === "error" && "bg-red-50 dark:bg-red-950/30",
+                    column.state === "locked" && "bg-stone-100 dark:bg-stone-800/40"
                   )}
                 >
                   {column.cell(row)}

@@ -15,6 +15,7 @@ import { getCurrentActor } from "../auth/api";
 import { getProtectedViewState } from "../auth/auth-flow";
 import { visibleAppNavItems } from "../navigation/app-nav";
 import { LocaleControls } from "./app-shell/locale-controls";
+import { ThemeToggle } from "./theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,6 +91,12 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
   }
 
   const navItems = visibleAppNavItems(actor.role);
+  // A nav item owns the current page when the path equals its href or sits below
+  // it (e.g. /candidates/interviews -> Candidates, /settings/users -> Settings).
+  // "/" is excluded from the prefix check so it doesn't swallow every route.
+  const isActive = (href: string) =>
+    pathname === href || (href !== "/" && pathname.startsWith(`${href}/`)) ||
+    (href === "/settings/general" && pathname.startsWith("/settings"));
   const nav = (
     <nav className="app-nav" aria-label="Primary">
       {navItems.map((item) => {
@@ -98,7 +105,7 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
           <Link
             key={item.id}
             href={item.href}
-            aria-current={pathname === item.href ? "page" : undefined}
+            aria-current={isActive(item.href) ? "page" : undefined}
             onClick={() => setNavOpen(false)}
           >
             <Icon size={18} aria-hidden />
@@ -108,11 +115,7 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
       })}
     </nav>
   );
-  const activeNavItem =
-    navItems.find((item) => item.href === pathname) ??
-    navItems.find((item) => item.id === "settings" && pathname.startsWith("/settings")) ??
-    navItems.find((item) => item.href !== "/" && pathname.startsWith(item.href)) ??
-    navItems[0];
+  const activeNavItem = navItems.find((item) => isActive(item.href)) ?? navItems[0];
   const pageTitle = activeNavItem ? t(activeNavItem.labelKey.replace("app.", "")) : t("main");
   const signOut = () =>
     void authClient.signOut({
@@ -136,6 +139,7 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
             <Menu size={18} aria-hidden />
           </IconButton>
           <h1 className="shell-page-title">{pageTitle}</h1>
+          <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="shell-profile-trigger" type="button" aria-label={`${actor.fullName} profile menu`}>

@@ -14,21 +14,21 @@ export type StatusTone = (typeof UI_STATUS_TONES)[number];
 
 export const UI_TOKENS = {
   color: {
-    background: "#f7f9fb",
+    background: "#faf8f4",
     surface: "#ffffff",
-    surfaceMuted: "#eef3f5",
-    text: "#18212f",
-    textMuted: "#64748b",
-    border: "#d9e1e7",
-    primary: "#147c75",
+    surfaceMuted: "#f0ebe1",
+    text: "#1f1b15",
+    textMuted: "#7a7064",
+    border: "#e4ddcf",
+    primary: "#cda028",
     primaryText: "#ffffff",
-    info: "#2563eb",
-    success: "#16803c",
-    warning: "#b7791b",
-    danger: "#b42318",
-    review: "#7c3aed",
-    locked: "#6b7280",
-    focus: "#0ea5a3"
+    info: "#2f74b5",
+    success: "#2f7d4f",
+    warning: "#d99a2b",
+    danger: "#d64545",
+    review: "#7c5cd6",
+    locked: "#8a8278",
+    focus: "#cda028"
   },
   radius: {
     sm: "6px",

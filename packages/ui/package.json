@@ -8,6 +8,7 @@
     "./tokens.css": "./src/tokens/tokens.css",
     "./lib/utils": "./src/lib/utils.ts",
     "./components/button": "./src/components/button.tsx",
+    "./components/card": "./src/components/card.tsx",
     "./components/input": "./src/components/input.tsx",
     "./components/textarea": "./src/components/textarea.tsx",
     "./components/label": "./src/components/label.tsx",
@@ -46,7 +47,8 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.17.0",
     "tailwind-merge": "^3.4.0",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^4.1.18",
+    "tw-animate-css": "^1.4.0"
   },
   "peerDependencies": {
     "react": "^19.0.0",

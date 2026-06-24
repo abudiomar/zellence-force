@@ -4,12 +4,12 @@ import type { StatusTone } from "./badge";
 
 const toneClasses: Record<StatusTone, string> = {
   neutral: "border-[hsl(var(--border))] bg-[hsl(var(--card))]",
-  info: "border-blue-200 bg-blue-50 text-blue-950",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-950",
-  warning: "border-amber-200 bg-amber-50 text-amber-950",
-  danger: "border-red-200 bg-red-50 text-red-950",
-  review: "border-violet-200 bg-violet-50 text-violet-950",
-  locked: "border-slate-200 bg-slate-100 text-slate-900"
+  info: "border-blue-200 bg-blue-50 text-blue-950 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-100",
+  success: "border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100",
+  warning: "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100",
+  danger: "border-red-200 bg-red-50 text-red-950 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-100",
+  review: "border-violet-200 bg-violet-50 text-violet-950 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-100",
+  locked: "border-stone-200 bg-stone-100 text-stone-900 dark:border-stone-700/60 dark:bg-stone-800/50 dark:text-stone-100"
 };
 
 export function Alert({ className, tone = "neutral", ...props }: React.HTMLAttributes<HTMLDivElement> & { tone?: StatusTone }) {

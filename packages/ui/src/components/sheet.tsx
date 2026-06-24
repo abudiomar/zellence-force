@@ -23,11 +23,25 @@ export function SheetContent({
         : side === "top"
           ? "inset-x-0 top-0"
           : "inset-x-0 bottom-0";
+  // Slide direction follows the panel edge; start/end are RTL-aware (start = right in RTL).
+  const sideAnim =
+    side === "start"
+      ? "ltr:data-[state=open]:slide-in-from-left ltr:data-[state=closed]:slide-out-to-left rtl:data-[state=open]:slide-in-from-right rtl:data-[state=closed]:slide-out-to-right"
+      : side === "end"
+        ? "ltr:data-[state=open]:slide-in-from-right ltr:data-[state=closed]:slide-out-to-right rtl:data-[state=open]:slide-in-from-left rtl:data-[state=closed]:slide-out-to-left"
+        : side === "top"
+          ? "data-[state=open]:slide-in-from-top data-[state=closed]:slide-out-to-top"
+          : "data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom";
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-950/45" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#171513]/55 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
       <DialogPrimitive.Content
-        className={cn("fixed z-50 overflow-auto border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5 text-[hsl(var(--foreground))] shadow-xl", sideClass, className)}
+        className={cn(
+          "fixed z-50 overflow-auto border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5 text-[hsl(var(--foreground))] shadow-xl ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:duration-300 data-[state=closed]:duration-200",
+          sideClass,
+          sideAnim,
+          className
+        )}
         {...props}
       >
         {children}

@@ -1,41 +1,54 @@
 @import "tailwindcss";
+/* Radix overlay enter/exit animations (animate-in/out, fade/zoom/slide) — the v4-native
+ * successor to tailwindcss-animate. Powers the smooth, animated feel across all popovers. */
+@import "tw-animate-css";
 
 @source "../../../../apps/web/src";
 @source "../";
 
+/* next-themes toggles a `.dark` class on <html>, so make the `dark:` variant key off it
+ * (Tailwind v4 defaults `dark:` to prefers-color-scheme). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Zellence brand tokens — warm, premium, gold-on-cream by day, gold-on-charcoal by night.
+ * Light/dark are HSL triplets so component classes (hsl(var(--token))) flip automatically.
+ * Keep gold for primary actions, the logo and key accents — neutrals are always warm-tinted.
+ */
 :root {
   color-scheme: light;
-  --background: 210 25% 97%;
-  --foreground: 217 29% 13%;
+  --background: 40 33% 97%;
+  --foreground: 30 15% 12%;
   --card: 0 0% 100%;
-  --card-foreground: 217 29% 13%;
+  --card-foreground: 30 15% 12%;
   --popover: 0 0% 100%;
-  --popover-foreground: 217 29% 13%;
-  --primary: 176 72% 28%;
+  --popover-foreground: 30 15% 12%;
+  --primary: 38 72% 42%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 210 20% 94%;
-  --secondary-foreground: 217 29% 13%;
-  --muted: 210 18% 92%;
-  --muted-foreground: 215 14% 42%;
-  --accent: 176 50% 92%;
-  --accent-foreground: 176 72% 24%;
-  --destructive: 4 74% 44%;
+  --secondary: 40 20% 93%;
+  --secondary-foreground: 30 15% 12%;
+  --muted: 40 20% 93%;
+  --muted-foreground: 30 8% 44%;
+  --accent: 40 52% 90%;
+  --accent-foreground: 36 60% 30%;
+  --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --border: 214 24% 86%;
-  --input: 214 24% 86%;
-  --ring: 176 72% 36%;
-  --radius: 8px;
-  --sidebar-background: 218 39% 11%;
-  --sidebar-foreground: 210 22% 91%;
-  --sidebar-muted: 217 24% 23%;
-  --sidebar-accent: 176 68% 40%;
-  --sidebar-accent-foreground: 0 0% 100%;
-  --sidebar-border: 217 30% 18%;
-  --status-info: 221 83% 53%;
-  --status-success: 142 71% 34%;
-  --status-warning: 38 92% 42%;
-  --status-review: 262 83% 58%;
-  --status-locked: 215 14% 42%;
+  --border: 35 18% 88%;
+  --input: 35 18% 88%;
+  --ring: 38 72% 42%;
+  --radius: 0.65rem;
+  --sidebar-background: 30 9% 9%;
+  --sidebar-foreground: 40 20% 92%;
+  --sidebar-muted: 30 6% 17%;
+  --sidebar-accent: 40 68% 52%;
+  --sidebar-accent-foreground: 40 30% 95%;
+  --sidebar-border: 32 10% 18%;
+  --status-info: 210 70% 48%;
+  --status-success: 142 60% 35%;
+  --status-warning: 38 90% 48%;
+  --status-review: 262 70% 56%;
+  --status-locked: 30 8% 46%;
+  --zf-font-heading: var(--font-heading), "Playfair Display", Georgia, "Times New Roman", serif;
   --zf-color-background: hsl(var(--background));
   --zf-color-surface: hsl(var(--card));
   --zf-color-surface-muted: hsl(var(--muted));
@@ -60,7 +73,7 @@
   --zf-space-5: 20px;
   --zf-space-6: 24px;
   --zf-space-8: 32px;
-  --zf-font-body: "IBM Plex Sans Arabic", "IBM Plex Sans", system-ui, sans-serif;
+  --zf-font-body: var(--font-arabic), var(--font-body), "Noto Sans Arabic", "DM Sans", system-ui, sans-serif;
   --zf-font-size-body: 15px;
   --zf-font-size-small: 13px;
   --zf-font-size-title: 22px;
@@ -70,7 +83,43 @@
   --zf-touch-target: 48px;
   --zf-sidebar-width: 272px;
   --zf-topbar-height: 64px;
-  --zf-shadow-overlay: 0 24px 60px rgb(15 23 42 / 18%);
+  --zf-shadow-overlay: 0 24px 60px rgb(23 21 19 / 18%);
+}
+
+/* Dark mode — gold-on-charcoal. Activated by adding the `dark` class to <html>. */
+.dark {
+  color-scheme: dark;
+  --background: 30 10% 8%;
+  --foreground: 40 20% 92%;
+  --card: 30 8% 12%;
+  --card-foreground: 40 20% 92%;
+  --popover: 30 8% 10%;
+  --popover-foreground: 40 20% 92%;
+  --primary: 40 68% 52%;
+  --primary-foreground: 30 10% 8%;
+  --secondary: 30 5% 18%;
+  --secondary-foreground: 40 20% 92%;
+  --muted: 30 5% 16%;
+  --muted-foreground: 30 8% 60%;
+  --accent: 36 30% 20%;
+  --accent-foreground: 40 68% 60%;
+  --destructive: 0 62% 45%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 30 5% 20%;
+  --input: 30 5% 22%;
+  --ring: 40 68% 52%;
+  --sidebar-background: 30 10% 6%;
+  --sidebar-foreground: 40 20% 90%;
+  --sidebar-muted: 30 6% 16%;
+  --sidebar-accent: 40 68% 52%;
+  --sidebar-accent-foreground: 40 30% 95%;
+  --sidebar-border: 32 8% 16%;
+  --status-info: 210 65% 55%;
+  --status-success: 142 55% 42%;
+  --status-warning: 38 85% 55%;
+  --status-review: 262 65% 62%;
+  --status-locked: 30 8% 60%;
+  --zf-shadow-overlay: 0 24px 60px rgb(0 0 0 / 50%);
 }
 
 * {
@@ -104,5 +153,135 @@ textarea {
 @keyframes zf-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Type scale — Playfair Display for voice (headings), DM Sans for work (body).
+ * Reach for these instead of ad-hoc sizes so hierarchy stays consistent.
+ * Headings fall back to the Arabic font under [dir="rtl"] (Playfair lacks Arabic glyphs).
+ * ------------------------------------------------------------------------- */
+.text-display {
+  font-family: var(--zf-font-heading);
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.text-heading-1 {
+  font-family: var(--zf-font-heading);
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.text-heading-2 {
+  font-family: var(--zf-font-heading);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.text-heading-3 {
+  font-family: var(--zf-font-heading);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+[dir="rtl"] .text-display,
+[dir="rtl"] .text-heading-1,
+[dir="rtl"] .text-heading-2,
+[dir="rtl"] .text-heading-3 {
+  font-family: var(--font-arabic), var(--zf-font-body);
+  letter-spacing: 0;
+}
+
+.text-body-large {
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.text-body {
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.text-body-small {
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.text-caption {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.text-overline {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Soft, layered, warm elevation — depth from low-opacity shadows, not hard borders. */
+.surface-elevated {
+  box-shadow: 0 1px 3px rgb(23 21 19 / 0.08), 0 1px 2px rgb(23 21 19 / 0.06);
+}
+
+.surface-raised {
+  box-shadow: 0 2px 8px rgb(23 21 19 / 0.08), 0 1px 2px rgb(23 21 19 / 0.06);
+}
+
+.surface-floating {
+  box-shadow: 0 8px 24px rgb(23 21 19 / 0.12), 0 2px 6px rgb(23 21 19 / 0.08);
+}
+
+/* Calm, purposeful motion — ~200-300ms ease-out; reward interaction, never distract. */
+@keyframes zf-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: zf-fade-in-up 300ms ease-out both;
+}
+
+@keyframes zf-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted) / 0.6) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: zf-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .shimmer {
+    animation: none;
   }
 }

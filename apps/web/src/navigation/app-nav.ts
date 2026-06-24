@@ -1,4 +1,13 @@
-import { Home, Settings, UserSearch, type LucideIcon } from "lucide-react";
+import {
+  CalendarDays,
+  LayoutDashboard,
+  MessageCircle,
+  Settings,
+  Star,
+  Users,
+  UserSearch,
+  type LucideIcon
+} from "lucide-react";
 import {
   PERMISSIONS,
   canRole,
@@ -15,45 +24,57 @@ export type AppNavItem = {
   enabled: boolean;
 };
 
+// The pipeline spine a staffing manager works through: see the day at a glance,
+// move candidates through review -> interviews, draw from the staff pool to fill
+// events, and watch WhatsApp for urgent staff messages. Each stage is its own
+// route so it can be bookmarked, deep-linked, and reached via the back button.
 export const APP_NAV_ITEMS: AppNavItem[] = [
   {
-    id: "operations",
+    id: "dashboard",
     href: "/",
-    labelKey: "app.main",
-    icon: Home,
+    labelKey: "app.nav.dashboard",
+    icon: LayoutDashboard,
     enabled: true
   },
   {
-    id: "applicants",
-    href: "/recruitment/applicants",
-    labelKey: "app.applicants",
+    id: "candidates",
+    href: "/candidates",
+    labelKey: "app.nav.candidates",
     icon: UserSearch,
+    requiredPermission: PERMISSIONS.MANAGE_APPLICANT_IMPORT,
+    enabled: true
+  },
+  {
+    id: "staff",
+    href: "/staff",
+    labelKey: "app.nav.staff",
+    icon: Star,
+    requiredPermission: PERMISSIONS.MANAGE_APPLICANT_IMPORT,
+    enabled: true
+  },
+  {
+    id: "events",
+    href: "/events",
+    labelKey: "app.nav.events",
+    icon: CalendarDays,
+    requiredPermission: PERMISSIONS.MANAGE_APPLICANT_IMPORT,
+    enabled: true
+  },
+  {
+    id: "messages",
+    href: "/messages",
+    labelKey: "app.nav.messages",
+    icon: MessageCircle,
     requiredPermission: PERMISSIONS.MANAGE_APPLICANT_IMPORT,
     enabled: true
   },
   {
     id: "settings",
     href: "/settings/general",
-    labelKey: "app.settings",
+    labelKey: "app.nav.settings",
     icon: Settings,
     requiredPermission: PERMISSIONS.MANAGE_SETTINGS,
     enabled: true
-  },
-  {
-    id: "settings-users",
-    href: "/settings/users",
-    labelKey: "app.users",
-    icon: Settings,
-    requiredPermission: PERMISSIONS.MANAGE_USERS,
-    enabled: true
-  },
-  {
-    id: "future-events",
-    href: "/events",
-    labelKey: "app.events",
-    icon: Home,
-    requiredPermission: PERMISSIONS.MANAGE_EVENTS,
-    enabled: false
   }
 ];
 

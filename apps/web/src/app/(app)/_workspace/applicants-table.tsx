@@ -7,15 +7,18 @@ import { StatusBadge } from "@zellforce/ui/components/badge";
 import { Checkbox } from "@zellforce/ui/components/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@zellforce/ui/components/table";
 import { getApplicantStatusVisual } from "../../../ui/applicant-status-visuals";
+import { contractTone, interviewTone, labelize, screeningTone } from "./helpers";
 
 export function ApplicantsTable({
   rows,
   selectedId,
-  onRowActivate
+  onRowActivate,
+  emptyLabel = "No applicants need review"
 }: {
   rows: ApplicantReviewQueueItem[];
   selectedId?: string | null | undefined;
   onRowActivate?: (row: ApplicantReviewQueueItem) => void;
+  emptyLabel?: string;
 }) {
   return (
     <div className="table-shell applicant-table-shell">
@@ -38,7 +41,7 @@ export function ApplicantsTable({
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="h-28 text-center text-muted">No applicants need review</TableCell>
+              <TableCell colSpan={11} className="h-28 text-center text-muted">{emptyLabel}</TableCell>
             </TableRow>
           ) : rows.map((row) => {
             const visual = getApplicantStatusVisual(row.status);
@@ -94,30 +97,4 @@ export function ApplicantsTable({
       </Table>
     </div>
   );
-}
-
-function labelize(value: string): string {
-  return value.replaceAll("_", " ");
-}
-
-function screeningTone(status: ApplicantReviewQueueItem["screeningStatus"]) {
-  if (status === "save_to_staff_pool") return "success";
-  if (status === "shortlist_for_interview" || status === "save_for_future") return "info";
-  if (status === "underqualified" || status === "overqualified") return "warning";
-  if (status === "rejected") return "danger";
-  return "review";
-}
-
-function interviewTone(status: ApplicantReviewQueueItem["interviewStatus"]) {
-  if (status === "passed") return "success";
-  if (status === "failed" || status === "no_show") return "danger";
-  if (status === "scheduled" || status === "interviewed") return "info";
-  return "neutral";
-}
-
-function contractTone(status: ApplicantReviewQueueItem["contractStatus"]) {
-  if (status === "signed") return "success";
-  if (status === "refused") return "danger";
-  if (status === "sent" || status === "pending") return "warning";
-  return "neutral";
 }

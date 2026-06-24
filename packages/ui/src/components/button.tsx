@@ -6,12 +6,17 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-transparent px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4",
+  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-transparent px-4 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))] disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] [&_svg]:size-4",
   {
     variants: {
       variant: {
-        primary: "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary)/0.92)]",
+        primary: "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-[0_4px_14px_-6px_hsl(var(--primary)/0.6)] hover:-translate-y-0.5 hover:bg-[hsl(var(--primary)/0.92)] hover:shadow-[0_8px_20px_-6px_hsl(var(--primary)/0.55)] active:translate-y-0",
         secondary: "border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]",
+        accent: "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary)/0.9)]",
+        outline:
+          "border-[hsl(var(--border))] bg-transparent text-[hsl(var(--foreground))] hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/0.06)] hover:text-[hsl(var(--primary))]",
+        ghost: "bg-transparent text-[hsl(var(--foreground))] hover:bg-[hsl(var(--primary)/0.08)] hover:text-[hsl(var(--primary))]",
+        link: "h-auto border-0 px-0 text-[hsl(var(--primary))] underline-offset-4 hover:underline active:scale-100",
         quiet: "bg-transparent text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]",
         danger: "bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] hover:bg-[hsl(var(--destructive)/0.9)]"
       },
@@ -52,15 +57,17 @@ export function Button({ className, variant, size, asChild = false, loading = fa
 export function IconButton({
   label,
   className,
+  variant = "secondary",
+  size = "icon",
   children,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+}: ButtonProps & { label: string }) {
   return (
     <Button
       aria-label={label}
       title={label}
-      variant="secondary"
-      size="icon"
+      variant={variant}
+      size={size}
       className={className}
       {...props}
     >
