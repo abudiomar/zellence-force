@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { AlertTriangle, ClipboardList, MessageCircle, RefreshCw, UserCheck, Users } from "lucide-react";
 import { Button } from "@zellforce/ui/components/button";
 import { Skeleton } from "@zellforce/ui/components/skeleton";
@@ -14,6 +15,7 @@ import {
 import { calculateMetrics, useWorkspaceData } from "./_workspace/use-workspace-data";
 
 export function DashboardClient() {
+  const t = useTranslations("app.workspace");
   const { data, state, reload } = useWorkspaceData({ queue: true, staff: true, inbox: true });
 
   if (state === "loading") {
@@ -29,7 +31,7 @@ export function DashboardClient() {
     return (
       <section className="screen-state">
         <h2>Unable to load dashboard</h2>
-        <Button type="button" onClick={reload}>Retry</Button>
+        <Button type="button" onClick={reload}>{t("retry")}</Button>
       </section>
     );
   }
@@ -42,11 +44,11 @@ export function DashboardClient() {
   return (
     <div className="candidate-workspace">
       <WorkspaceHeader
-        eyebrow="Operations"
-        title="Your staffing pipeline at a glance"
+        eyebrow={t("dashboardEyebrow")}
+        title={t("dashboardTitle")}
         actions={
           <Button type="button" variant="secondary" onClick={reload}>
-            <RefreshCw aria-hidden />Refresh
+            <RefreshCw aria-hidden />{t("refresh")}
           </Button>
         }
       />
@@ -72,7 +74,7 @@ export function DashboardClient() {
             {latestRows.map((row) => (
               <CandidateLine key={row.id} row={row} />
             ))}
-            {latestRows.length === 0 ? <EmptyLine label="No imported candidates" /> : null}
+            {latestRows.length === 0 ? <EmptyLine label={t("emptyCandidates")} /> : null}
           </div>
         </section>
 
@@ -89,7 +91,7 @@ export function DashboardClient() {
                 <span>{message.body}</span>
               </div>
             ))}
-            {emergencies.length === 0 ? <EmptyLine label="No urgent messages" /> : null}
+            {emergencies.length === 0 ? <EmptyLine label={t("emptyUrgent")} /> : null}
           </div>
         </section>
       </section>

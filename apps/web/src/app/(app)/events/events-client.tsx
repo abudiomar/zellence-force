@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { CalendarDays, ClipboardList, RefreshCw, Save } from "lucide-react";
 import { Button } from "@zellforce/ui/components/button";
 import { TextInput } from "@zellforce/ui/components/input";
@@ -8,7 +9,7 @@ import { Field } from "@zellforce/ui/components/label";
 import { Skeleton } from "@zellforce/ui/components/skeleton";
 import { createDemoEvent } from "../_workspace/api";
 import {
-  EmptyLine,
+  EmptyState,
   PanelHeader,
   ProgressValue,
   WorkspaceFeedback,
@@ -19,6 +20,8 @@ import { useWorkspaceData } from "../_workspace/use-workspace-data";
 
 export function EventsClient() {
   const { data, state, busy, status, error, reload, runBusy } = useWorkspaceData({ events: true });
+  const t = useTranslations("app.workspace");
+  const tg = useTranslations("app.workspace.guided");
   const [form, setForm] = React.useState(initialDemoEvent);
 
   const events = data.events;
@@ -36,7 +39,7 @@ export function EventsClient() {
     return (
       <section className="screen-state">
         <h2>Unable to load events</h2>
-        <Button type="button" onClick={reload}>Retry</Button>
+        <Button type="button" onClick={reload}>{t("retry")}</Button>
       </section>
     );
   }
@@ -44,11 +47,11 @@ export function EventsClient() {
   return (
     <div className="candidate-workspace">
       <WorkspaceHeader
-        eyebrow="Events"
-        title="Create events and track shortlist progress"
+        eyebrow={t("eventsEyebrow")}
+        title={t("eventsTitle")}
         actions={
           <Button type="button" variant="secondary" onClick={reload}>
-            <RefreshCw aria-hidden />Refresh
+            <RefreshCw aria-hidden />{t("refresh")}
           </Button>
         }
       />
@@ -85,7 +88,7 @@ export function EventsClient() {
             });
             return "Event created";
           })}>
-            <Save aria-hidden />Create event
+            <Save aria-hidden />{t("createEvent")}
           </Button>
         </div>
 
@@ -105,7 +108,13 @@ export function EventsClient() {
                 </div>
               </article>
             ))}
-            {events.length === 0 ? <EmptyLine label="No events created yet" /> : null}
+            {events.length === 0 ? (
+              <EmptyState
+                icon={<CalendarDays />}
+                title={tg("eventsTitle")}
+                description={tg("eventsBody")}
+              />
+            ) : null}
           </div>
         </div>
       </section>

@@ -6,12 +6,29 @@ const columnAliases: Record<keyof GoogleSheetMapping, string[]> = {
   email: ["email", "email address", "البريد", "البريد الإلكتروني"],
   city: ["city", "location", "area", "المدينة", "الموقع"],
   gender: ["gender", "sex", "الجنس"],
+  nationality: ["nationality", "country", "الجنسية"],
   nationalId: ["national id", "id number", "iqama", "هوية", "الإقامة"],
   dateOfBirth: ["date of birth", "birth date", "dob", "تاريخ الميلاد"],
   age: ["age", "العمر"],
-  photoUrl: ["photo", "image", "picture", "profile photo", "الصورة"],
-  cvUrl: ["cv", "resume", "السيرة الذاتية"],
+  canTravel: [
+    "travel",
+    "traveling",
+    "travelling",
+    "relocate",
+    "relocation",
+    "willing to travel",
+    "other cities",
+    "capable of traveling",
+    "السفر",
+    "التنقل",
+    "الانتقال"
+  ],
+  photoUrl: ["photo", "image", "picture", "profile photo", "professional images", "headshot", "الصورة"],
+  cvUrl: ["cv", "resume", "your resume", "السيرة الذاتية"],
   experience: ["experience", "work experience", "الخبرة"],
+  englishLevel: ["english level", "rate your english", "english", "spoken english", "مستوى الإنجليزية", "الإنجليزية"],
+  languages: ["languages", "language", "languages you speak", "spoken languages", "اللغات"],
+  submittedAt: ["timestamp", "submitted", "submission time", "الطابع الزمني", "وقت الإرسال"],
   notes: ["notes", "comments", "ملاحظات"]
 };
 
@@ -25,11 +42,16 @@ export const applicantMappingFields: Array<{
   { key: "email", label: "Email" },
   { key: "city", label: "City/location" },
   { key: "gender", label: "Gender" },
+  { key: "nationality", label: "Nationality" },
   { key: "age", label: "Age" },
   { key: "dateOfBirth", label: "Date of birth" },
+  { key: "canTravel", label: "Can travel to other cities" },
   { key: "photoUrl", label: "Photo" },
   { key: "cvUrl", label: "CV" },
   { key: "experience", label: "Experience" },
+  { key: "englishLevel", label: "English level" },
+  { key: "languages", label: "Languages spoken" },
+  { key: "submittedAt", label: "Submitted at" },
   { key: "notes", label: "Notes" }
 ];
 

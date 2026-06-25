@@ -14,6 +14,7 @@ import { authClient } from "../auth/auth-client";
 import { getCurrentActor } from "../auth/api";
 import { getProtectedViewState } from "../auth/auth-flow";
 import { visibleAppNavItems } from "../navigation/app-nav";
+import { listWhatsAppInbox } from "../app/(app)/_workspace/api";
 import { LocaleControls } from "./app-shell/locale-controls";
 import { ThemeToggle } from "./theme-toggle";
 import {
@@ -35,6 +36,7 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
   const [actor, setActor] = useState<AuthenticatedUser | null>(null);
   const [actorPending, setActorPending] = useState(true);
   const [navOpen, setNavOpen] = useState(false);
+  const [urgentCount, setUrgentCount] = useState(0);
   const state = getProtectedViewState(sessionPending, hasSession ? { session: true } : null);
 
   useEffect(() => {
@@ -79,6 +81,26 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
     }
   }, [router, state]);
 
+  // Surface the count of urgent WhatsApp messages as a sidebar badge so an
+  // emergency interrupts wherever the manager is. Re-fetched on navigation so it
+  // clears once they visit the inbox and the urgent items are handled.
+  useEffect(() => {
+    if (state !== "authenticated") return;
+    let active = true;
+    void listWhatsAppInbox()
+      .then((messages) => {
+        if (active) {
+          setUrgentCount(messages.filter((message) => message.isEmergency).length);
+        }
+      })
+      .catch(() => {
+        if (active) setUrgentCount(0);
+      });
+    return () => {
+      active = false;
+    };
+  }, [state, pathname]);
+
   if (state !== "authenticated" || actorPending || !actor) {
     return (
       <main className="center-state">
@@ -110,6 +132,9 @@ export function ProtectedShell({ children }: { children: ReactNode }) {
           >
             <Icon size={18} aria-hidden />
             <span>{t(item.labelKey.replace("app.", ""))}</span>
+            {item.id === "messages" && urgentCount > 0 ? (
+              <span className="app-nav__badge" aria-label={`${urgentCount} urgent`}>{urgentCount}</span>
+            ) : null}
           </Link>
         );
       })}

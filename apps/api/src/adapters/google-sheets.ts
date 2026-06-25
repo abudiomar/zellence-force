@@ -114,8 +114,18 @@ export function createGoogleSheetsApplicantAdapter(input: {
 
       const accessToken = await tokenProvider();
 
+      // Read the grid (not the flat `values` endpoint) so we can recover cell
+      // hyperlinks. Google Form file-upload answers and "Insert > Link" cells
+      // show display text (e.g. a CV filename) while the real Drive URL lives in
+      // the cell's hyperlink metadata — which the `values` endpoint strips.
       const url = new URL(
-        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(args.sourceId)}/values/${encodeURIComponent(args.sourceRange)}`
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(args.sourceId)}`
+      );
+      url.searchParams.set("ranges", args.sourceRange);
+      url.searchParams.set("includeGridData", "true");
+      url.searchParams.set(
+        "fields",
+        "sheets.data.rowData.values(formattedValue,hyperlink,textFormatRuns.format.link.uri)"
       );
       const response = await fetchImpl(url.toString(), {
         headers: { Authorization: `Bearer ${accessToken}` }
@@ -128,18 +138,49 @@ export function createGoogleSheetsApplicantAdapter(input: {
         );
       }
 
-      const payload = await response.json() as { values?: unknown[][] };
-      const values = payload.values ?? [];
-      if (values.length === 0) return [];
-      const headers = (values[0] ?? []).map((value) => String(value));
-      return values.slice(1).map((row, index): ApplicantSheetRow => ({
-        rowId: String(index + 2),
-        values: Object.fromEntries(
-          headers.map((header, columnIndex) => [header, row[columnIndex] ?? ""])
-        )
-      }));
+      const payload = await response.json() as GridDataPayload;
+      return gridRowsToApplicantRows(payload);
     }
   };
+}
+
+type GridCell = {
+  formattedValue?: string;
+  hyperlink?: string;
+  textFormatRuns?: Array<{ format?: { link?: { uri?: string } } }>;
+};
+
+type GridDataPayload = {
+  sheets?: Array<{
+    data?: Array<{
+      rowData?: Array<{ values?: GridCell[] }>;
+    }>;
+  }>;
+};
+
+// Resolve a cell to the value we want to import. A hyperlink (whole-cell link or
+// a rich-text run link) takes precedence over the display text, so a CV cell
+// showing a filename yields its underlying Drive URL. Plain cells (including a
+// cell whose text already IS a URL, like a pasted photo link) fall through to
+// the formatted value unchanged.
+export function effectiveCellValue(cell: GridCell | null | undefined): string {
+  if (!cell) return "";
+  if (cell.hyperlink) return cell.hyperlink;
+  const runLink = cell.textFormatRuns?.find((run) => run.format?.link?.uri)?.format?.link?.uri;
+  if (runLink) return runLink;
+  return cell.formattedValue ?? "";
+}
+
+export function gridRowsToApplicantRows(payload: GridDataPayload): ApplicantSheetRow[] {
+  const rowData = payload.sheets?.[0]?.data?.[0]?.rowData ?? [];
+  if (rowData.length === 0) return [];
+  const headers = (rowData[0]?.values ?? []).map((cell) => cell?.formattedValue ?? "");
+  return rowData.slice(1).map((row, index): ApplicantSheetRow => ({
+    rowId: String(index + 2),
+    values: Object.fromEntries(
+      headers.map((header, columnIndex) => [header, effectiveCellValue(row.values?.[columnIndex])])
+    )
+  }));
 }
 
 function createGoogleSheetsTokenProvider(

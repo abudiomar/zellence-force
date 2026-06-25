@@ -41,6 +41,18 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
   };
 
 export function Button({ className, variant, size, asChild = false, loading = false, children, ...props }: ButtonProps) {
+  if (asChild) {
+    return (
+      <Slot
+        className={cn(buttonVariants({ variant, size }), className)}
+        aria-disabled={loading || props.disabled || undefined}
+        {...props}
+      >
+        {children}
+      </Slot>
+    );
+  }
+
   const Comp = asChild ? Slot : "button";
   return (
     <Comp

@@ -1,13 +1,14 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import type {
   DemoContractStatus,
   InterviewStatus,
   ScreeningStatus,
   StaffPoolFilter
 } from "@zellforce/contracts";
-import { CalendarDays, Filter, RefreshCw, UserCheck, Users } from "lucide-react";
+import { CalendarDays, Filter, RefreshCw, Star, UserCheck, Users } from "lucide-react";
 import { StatusBadge } from "@zellforce/ui/components/badge";
 import { Button } from "@zellforce/ui/components/button";
 import { Checkbox } from "@zellforce/ui/components/checkbox";
@@ -19,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { addCandidateToDemoEvent } from "../_workspace/api";
 import {
   CandidateIdentity,
+  EmptyState,
   PanelHeader,
   WorkspaceFeedback,
   WorkspaceHeader,
@@ -29,11 +31,11 @@ import {
   contractStatuses,
   emptyToUndefined,
   interviewStatuses,
-  labelize,
   numberOrUndefined,
   savedFilterViews,
   screeningStatuses
 } from "../_workspace/helpers";
+import { useStatusLabels } from "../_workspace/status-labels";
 import { useWorkspaceData } from "../_workspace/use-workspace-data";
 
 export function StaffClient() {
@@ -42,11 +44,18 @@ export function StaffClient() {
     { staff: true, events: true },
     filter
   );
+  const labels = useStatusLabels();
+  const t = useTranslations("app.workspace");
+  const tg = useTranslations("app.workspace.guided");
+  const tc = useTranslations("app");
   const [selectedStaffId, setSelectedStaffId] = React.useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = React.useState<string>("");
 
   const staff = data.staff;
   const events = data.events;
+  // Distinguish a genuinely empty roster (guide the user to go screen candidates)
+  // from a filtered-empty result (keep the filters visible with a "no matches" row).
+  const hasFilters = Object.values(filter).some((value) => value !== undefined && value !== "");
 
   React.useEffect(() => {
     setSelectedStaffId((current) => current ?? staff[0]?.id ?? null);
@@ -71,7 +80,7 @@ export function StaffClient() {
     return (
       <section className="screen-state">
         <h2>Unable to load staff pool</h2>
-        <Button type="button" onClick={reload}>Retry</Button>
+        <Button type="button" onClick={reload}>{t("retry")}</Button>
       </section>
     );
   }
@@ -79,18 +88,29 @@ export function StaffClient() {
   return (
     <div className="candidate-workspace">
       <WorkspaceHeader
-        eyebrow="Staff pool"
-        title="Filter your roster and shortlist staff for events"
+        eyebrow={t("staffEyebrow")}
+        title={t("staffTitle")}
         stats={<StatusBadge tone="success" label={`${staff.length} in pool`} />}
         actions={
           <Button type="button" variant="secondary" onClick={reload}>
-            <RefreshCw aria-hidden />Refresh
+            <RefreshCw aria-hidden />{t("refresh")}
           </Button>
         }
       />
 
       <WorkspaceFeedback status={status} error={error} />
 
+      {staff.length === 0 && !hasFilters ? (
+        <div className="candidate-panel">
+          <EmptyState
+            icon={<Star />}
+            title={tg("staffTitle")}
+            description={tg("staffBody")}
+            actionLabel={tg("staffAction")}
+            actionHref="/candidates"
+          />
+        </div>
+      ) : (
       <section className="candidate-grid">
         <div className="candidate-panel candidate-panel--wide">
           <PanelHeader icon={<Filter />} title="Staff Filters" />
@@ -111,6 +131,25 @@ export function StaffClient() {
             <Field label="Gender">
               <TextInput value={filter.gender ?? ""} onChange={(event) => setFilter({ ...filter, gender: emptyToUndefined(event.currentTarget.value) })} />
             </Field>
+            <Field label={t("filters.nationality")}>
+              <TextInput value={filter.nationality ?? ""} onChange={(event) => setFilter({ ...filter, nationality: emptyToUndefined(event.currentTarget.value) })} />
+            </Field>
+            <Field label={t("filters.language")}>
+              <TextInput value={filter.language ?? ""} onChange={(event) => setFilter({ ...filter, language: emptyToUndefined(event.currentTarget.value) })} />
+            </Field>
+            <Field label={t("filters.canTravel")}>
+              <Select
+                value={filter.canTravel === undefined ? "" : filter.canTravel ? "yes" : "no"}
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
+                  setFilter({ ...filter, canTravel: value === "" ? undefined : value === "yes" });
+                }}
+              >
+                <option value="">{t("filters.any")}</option>
+                <option value="yes">{tc("yes")}</option>
+                <option value="no">{tc("no")}</option>
+              </Select>
+            </Field>
             <Field label="Min age">
               <TextInput inputMode="numeric" value={filter.minAge ?? ""} onChange={(event) => setFilter({ ...filter, minAge: numberOrUndefined(event.currentTarget.value) })} />
             </Field>
@@ -120,19 +159,19 @@ export function StaffClient() {
             <Field label="Screening">
               <Select value={filter.screeningStatus ?? ""} onChange={(event) => setFilter({ ...filter, screeningStatus: emptyToUndefined(event.currentTarget.value) as ScreeningStatus | undefined })}>
                 <option value="">Any</option>
-                {screeningStatuses.map((value) => <option key={value} value={value}>{labelize(value)}</option>)}
+                {screeningStatuses.map((value) => <option key={value} value={value}>{labels.screening(value)}</option>)}
               </Select>
             </Field>
             <Field label="Interview">
               <Select value={filter.interviewStatus ?? ""} onChange={(event) => setFilter({ ...filter, interviewStatus: emptyToUndefined(event.currentTarget.value) as InterviewStatus | undefined })}>
                 <option value="">Any</option>
-                {interviewStatuses.map((value) => <option key={value} value={value}>{labelize(value)}</option>)}
+                {interviewStatuses.map((value) => <option key={value} value={value}>{labels.interview(value)}</option>)}
               </Select>
             </Field>
             <Field label="Contract">
               <Select value={filter.contractStatus ?? ""} onChange={(event) => setFilter({ ...filter, contractStatus: emptyToUndefined(event.currentTarget.value) as DemoContractStatus | undefined })}>
                 <option value="">Any</option>
-                {contractStatuses.map((value) => <option key={value} value={value}>{labelize(value)}</option>)}
+                {contractStatuses.map((value) => <option key={value} value={value}>{labels.contract(value)}</option>)}
               </Select>
             </Field>
             <Field label="Min final score">
@@ -162,7 +201,9 @@ export function StaffClient() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>City</TableHead>
+                <TableHead>{t("filters.nationality")}</TableHead>
                 <TableHead>Age</TableHead>
+                <TableHead>{tc("table.travel")}</TableHead>
                 <TableHead>Screening</TableHead>
                 <TableHead>Interview</TableHead>
                 <TableHead>Score</TableHead>
@@ -174,9 +215,19 @@ export function StaffClient() {
                 <TableRow key={item.id} tabIndex={0} data-state={selectedStaffId === item.id ? "selected" : undefined} onClick={() => setSelectedStaffId(item.id)}>
                   <TableCell><CandidateIdentity row={item} compact /></TableCell>
                   <TableCell>{item.city ?? "-"}</TableCell>
+                  <TableCell>{item.nationality ?? "-"}</TableCell>
                   <TableCell>{item.age ?? "-"}</TableCell>
-                  <TableCell><StatusBadge tone={screeningTone(item.screeningStatus)} label={labelize(item.screeningStatus)} /></TableCell>
-                  <TableCell><StatusBadge tone={interviewTone(item.interviewStatus)} label={labelize(item.interviewStatus)} /></TableCell>
+                  <TableCell>
+                    {item.canTravel === true ? (
+                      <StatusBadge tone="success" label={tc("yes")} />
+                    ) : item.canTravel === false ? (
+                      <StatusBadge tone="neutral" label={tc("no")} />
+                    ) : (
+                      <span className="text-muted">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell><StatusBadge tone={screeningTone(item.screeningStatus)} label={labels.screening(item.screeningStatus)} /></TableCell>
+                  <TableCell><StatusBadge tone={interviewTone(item.interviewStatus)} label={labels.interview(item.interviewStatus)} /></TableCell>
                   <TableCell>{item.finalScore?.toFixed(2) ?? "-"}</TableCell>
                   <TableCell>
                     <div className="flag-list">
@@ -188,7 +239,7 @@ export function StaffClient() {
               ))}
               {staff.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-28 text-center text-muted">No staff match the current filters</TableCell>
+                  <TableCell colSpan={9} className="h-28 text-center text-muted">{t("emptyStaff")}</TableCell>
                 </TableRow>
               ) : null}
             </TableBody>
@@ -218,10 +269,11 @@ export function StaffClient() {
               return "Candidate added to event shortlist";
             })}
           >
-            <UserCheck aria-hidden />Add selected candidate
+            <UserCheck aria-hidden />{t("addSelectedCandidate")}
           </Button>
         </div>
       </section>
+      )}
     </div>
   );
 }

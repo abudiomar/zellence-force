@@ -54,6 +54,16 @@ describe("UI primitives", () => {
     expect(screen.getByText("No rows")).toBeInTheDocument();
   });
 
+  test("renders asChild buttons with a single slotted child", () => {
+    render(
+      <Button asChild>
+        <a href="/staff">Staff pool</a>
+      </Button>
+    );
+
+    expect(screen.getByRole("link", { name: "Staff pool" })).toHaveAttribute("href", "/staff");
+  });
+
   test("renders data table, spreadsheet grid, and roster list", async () => {
     const activate = vi.fn();
     render(

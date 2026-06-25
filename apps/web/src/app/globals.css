@@ -170,6 +170,22 @@ a {
   background: hsl(var(--sidebar-accent));
 }
 
+.app-nav__badge {
+  margin-inline-start: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .app-main {
   min-width: 0;
   display: grid;
@@ -610,6 +626,69 @@ a {
   justify-content: flex-end;
 }
 
+.bulk-action-bar,
+.screening-action-row,
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-action-bar {
+  justify-content: flex-end;
+}
+
+.bulk-action-bar > span {
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.screening-action-row {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+/* These decision buttons carry long, localized labels and live in a narrow
+   column, so let them stretch full-width and grow vertically rather than
+   spilling text out of the fixed-height button box. */
+.screening-action-row button {
+  width: 100%;
+  height: auto;
+  min-height: 2.5rem;
+  padding-block: 0.5rem;
+  white-space: normal;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.screening-action {
+  border-color: transparent;
+}
+
+.screening-action--shortlist {
+  background: hsl(var(--status-success));
+  color: white;
+}
+
+.screening-action--shortlist:hover {
+  background: hsl(var(--status-success) / 0.9);
+}
+
+.screening-action--staff {
+  background: hsl(var(--status-warning));
+  color: hsl(var(--foreground));
+}
+
+.screening-action--staff:hover {
+  background: hsl(var(--status-warning) / 0.88);
+}
+
+.dialog-actions {
+  justify-content: flex-end;
+}
+
 .candidate-tabs {
   max-width: 100%;
   overflow-x: auto;
@@ -967,6 +1046,581 @@ a {
   justify-content: space-between;
 }
 
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 40px 24px;
+  border-radius: 12px;
+  border: 1px dashed hsl(var(--border));
+  background: hsl(var(--muted) / 0.4);
+}
+
+.empty-state__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 4px;
+}
+
+.empty-state__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.empty-state__title {
+  font-size: 16px;
+}
+
+.empty-state__description {
+  margin: 0;
+  max-width: 38ch;
+  color: hsl(var(--muted-foreground));
+}
+
+.empty-state a {
+  margin-top: 8px;
+}
+
+/* Expanded candidate detail dialog: a large, centered panel that scales in over
+ * the dimmed workspace (animation comes from DialogContent's zoom/fade classes).
+ * Left column = the CV as the centerpiece (with the headshot pinned to its
+ * corner); right column = a colored panel with the facts and the decision. */
+.candidate-detail-dialog {
+  width: min(97vw, 1360px);
+  height: 94vh;
+  max-height: 94vh;
+  padding: 0;
+  overflow: hidden;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.candidate-detail-dialog__title {
+  margin: 0;
+  padding: 20px 24px;
+  font-size: 20px;
+  border-block-end: 1px solid hsl(var(--border));
+}
+
+.candidate-detail-dialog__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(340px, 30%, 400px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Left: the CV occupies the full height of the dialog so it's actually readable. */
+.candidate-detail-dialog__stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 22px;
+  display: flex;
+  background:
+    radial-gradient(circle at top left, hsl(var(--accent) / 0.5), transparent 320px),
+    hsl(var(--muted) / 0.5);
+}
+
+.cv-stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.cv-stage .asset-preview {
+  flex: 1;
+  border-radius: 12px;
+}
+
+.cv-stage .asset-preview img,
+.cv-stage .asset-preview--doc iframe,
+.cv-stage .asset-preview--empty,
+.cv-stage .asset-preview--fallback {
+  height: 100%;
+}
+
+/* Right: scrollable colored panel holding badges, the application facts and the
+   decision actions stacked top to bottom. */
+.candidate-detail-dialog__panel {
+  border-inline-start: 1px solid hsl(var(--border));
+  background: hsl(var(--muted) / 0.35);
+  padding: 22px;
+  overflow-y: auto;
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.candidate-detail-dialog__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-fields h4 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: hsl(var(--muted-foreground));
+}
+
+.candidate-detail-dialog__actions {
+  border-block-start: 1px solid hsl(var(--border));
+  padding-block-start: 18px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+/* Headshot pinned to the CV's top-left corner: a small photo print on a cream
+   mat, ringed in brand gold and lifted off the page with a soft shadow. */
+.cv-photo {
+  position: absolute;
+  inset-block-start: 18px;
+  inset-inline-start: 18px;
+  z-index: 2;
+  width: 112px;
+  height: 112px;
+  padding: 5px;
+  border-radius: 14px;
+  background: hsl(var(--card));
+  box-shadow:
+    0 1px 0 hsl(var(--primary) / 0.25),
+    0 16px 32px -12px hsl(30 40% 8% / 0.5),
+    0 4px 10px -4px hsl(30 40% 8% / 0.35);
+  transform: rotate(-2deg);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.cv-photo::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1.5px hsl(var(--primary) / 0.55);
+  pointer-events: none;
+}
+
+.cv-photo img,
+.cv-photo__initials {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  object-fit: cover;
+  background: hsl(var(--muted));
+}
+
+.cv-photo__initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(150deg, hsl(var(--accent)), hsl(var(--muted)));
+  color: hsl(var(--primary));
+  font-size: 30px;
+  font-weight: 700;
+}
+
+a.cv-photo:hover {
+  transform: rotate(0deg) scale(1.03);
+  box-shadow:
+    0 1px 0 hsl(var(--primary) / 0.3),
+    0 22px 42px -12px hsl(30 40% 8% / 0.55),
+    0 6px 14px -4px hsl(30 40% 8% / 0.4);
+}
+
+.cv-photo__hint {
+  position: absolute;
+  inset-block-end: -6px;
+  inset-inline-end: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+a.cv-photo:hover .cv-photo__hint {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.candidate-detail-trigger {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Asset previews */
+.asset-preview {
+  position: relative;
+  border-radius: 10px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted) / 0.4);
+  overflow: hidden;
+}
+
+.asset-preview img {
+  display: block;
+  width: 100%;
+  height: 280px;
+  object-fit: contain;
+  background: hsl(var(--muted));
+}
+
+.asset-preview--doc iframe {
+  display: block;
+  width: 100%;
+  height: 280px;
+  border: 0;
+  background: hsl(var(--card));
+}
+
+.asset-preview--empty,
+.asset-preview--fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 280px;
+  color: hsl(var(--muted-foreground));
+  text-align: center;
+  padding: 16px;
+}
+
+.asset-preview--empty svg,
+.asset-preview--fallback svg {
+  width: 28px;
+  height: 28px;
+}
+
+.asset-preview__open {
+  position: absolute;
+  inset-block-end: 8px;
+  inset-inline-end: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 6px;
+  background: hsl(var(--card) / 0.92);
+  border: 1px solid hsl(var(--border));
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.asset-preview--empty .asset-preview__open,
+.asset-preview--fallback .asset-preview__open {
+  position: static;
+  margin-top: 4px;
+}
+
+.detail-fields__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.detail-field {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.detail-field--wide {
+  grid-column: 1 / -1;
+}
+
+.detail-field__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+}
+
+.detail-field__value {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.detail-fields__experience {
+  margin: 14px 0 0;
+  display: grid;
+  gap: 4px;
+}
+
+.detail-fields__experience p {
+  margin: 0;
+  white-space: pre-wrap;
+  color: hsl(var(--foreground));
+}
+
+.detail-languages {
+  margin: 14px 0 0;
+  display: grid;
+  gap: 6px;
+}
+
+.detail-languages__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detail-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  padding: 3px 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cell-truncate {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.candidate-panel--table .applicant-table-shell table {
+  min-width: 1320px;
+}
+
+/* Minimalist screening filter bar: a search box, a few toggle chips, and a
+ * gender segment. Sits between the panel header and the table. */
+.screening-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.screening-filters__search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 220px;
+  min-width: 200px;
+  height: 38px;
+  padding-inline: 12px;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--muted-foreground));
+}
+
+.screening-filters__search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  color: hsl(var(--foreground));
+}
+
+.screening-filters__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-chip {
+  height: 34px;
+  padding-inline: 14px;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.filter-chip:hover {
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+.filter-chip[data-active] {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.screening-filters__segmented {
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  padding: 2px;
+}
+
+.screening-filters__segmented button {
+  height: 30px;
+  padding-inline: 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.screening-filters__segmented button[data-active] {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  box-shadow: 0 1px 2px rgb(23 21 19 / 8%);
+}
+
+.screening-filters__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-inline-start: auto;
+}
+
+.screening-filters__count {
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+
+.screening-filters__clear {
+  border: 0;
+  background: transparent;
+  color: hsl(var(--primary));
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.screening-filters__clear:hover {
+  text-decoration: underline;
+}
+
+/* Age range: two compact number inputs inside a pill. */
+.screening-filters__age {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding-inline: 12px;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.screening-filters__age input {
+  width: 44px;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.screening-filters__age input::-webkit-outer-spin-button,
+.screening-filters__age input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.screening-filters__age > span:first-child {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Multi-select trigger chip (label + count badge + chevron). */
+.filter-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-select__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: hsl(var(--primary-foreground) / 0.25);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.filter-chip:not([data-active]) .filter-select__count {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.filter-select__menu {
+  max-height: 320px;
+  overflow-y: auto;
+  min-width: 220px;
+}
+
+.filter-select__check {
+  display: inline-flex;
+  width: 16px;
+  justify-content: center;
+  color: hsl(var(--primary));
+}
+
+.filter-select__empty {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+}
+
+@media (max-width: 860px) {
+  .candidate-detail-dialog__body {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-y: auto;
+  }
+
+  /* Stacked: give the CV a generous fixed height instead of stretching to fill. */
+  .candidate-detail-dialog__stage {
+    height: 62vh;
+  }
+
+  .candidate-detail-dialog__panel {
+    border-inline-start: 0;
+    border-block-start: 1px solid hsl(var(--border));
+  }
+}
+
 .score-preview strong {
   font-size: 24px;
 }
@@ -1212,7 +1866,19 @@ a {
   }
 
   .decision-grid,
+  .screening-action-row,
   .event-progress {
     grid-template-columns: 1fr;
+  }
+
+  .bulk-action-bar,
+  .dialog-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .bulk-action-bar > button,
+  .dialog-actions > button {
+    width: 100%;
   }
 }

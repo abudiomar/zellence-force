@@ -982,10 +982,15 @@ function mapApplicantQueueRow(value: unknown): ApplicantReviewQueueItem {
     email: emptyToNull(mappedData?.email),
     city: emptyToNull(mappedData?.city),
     gender: emptyToNull(mappedData?.gender),
+    nationality: emptyToNull(mappedData?.nationality),
     age: parseApplicantAge(mappedData),
+    canTravel: parseBooleanish(mappedData?.canTravel),
     photoUrl: emptyToNull(mappedData?.photoUrl),
     cvUrl: emptyToNull(mappedData?.cvUrl),
     experience: emptyToNull(mappedData?.experience),
+    englishLevel: emptyToNull(mappedData?.englishLevel),
+    languages: emptyToNull(mappedData?.languages),
+    submittedAt: emptyToNull(mappedData?.submittedAt),
     rawData,
     errorMessages: row.error_messages ?? [],
     matchedPersonId: row.matched_person_id,
@@ -1106,6 +1111,14 @@ function staffPoolItemMatchesFilter(item: StaffPoolItem, filter: StaffPoolFilter
   }
   if (filter.city && !equalsLoose(item.city, filter.city)) return false;
   if (filter.gender && !equalsLoose(item.gender, filter.gender)) return false;
+  if (filter.nationality && !equalsLoose(item.nationality, filter.nationality)) return false;
+  if (
+    filter.language &&
+    !(item.languages ?? "").toLowerCase().includes(filter.language.trim().toLowerCase())
+  ) {
+    return false;
+  }
+  if (filter.canTravel !== undefined && (item.canTravel ?? null) !== filter.canTravel) return false;
   if (filter.minAge !== undefined && (item.age === null || item.age === undefined || item.age < filter.minAge)) {
     return false;
   }
@@ -1148,6 +1161,20 @@ function parseJsonObject<T extends object>(value: unknown): T | null {
 function emptyToNull(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+// Form yes/no answers arrive as free text in either language. Normalize the
+// common affirmative/negative spellings to a boolean; anything unrecognized
+// (or blank) stays null so it reads as "unknown" rather than a false "no".
+const TRUTHY_ANSWERS = new Set(["yes", "y", "true", "1", "نعم", "اي", "ايوه", "أجل"]);
+const FALSY_ANSWERS = new Set(["no", "n", "false", "0", "لا", "كلا"]);
+
+function parseBooleanish(value: string | null | undefined): boolean | null {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (TRUTHY_ANSWERS.has(normalized)) return true;
+  if (FALSY_ANSWERS.has(normalized)) return false;
+  return null;
 }
 
 function parseApplicantAge(mappedData: ApplicantImportMappedData | null): number | null {

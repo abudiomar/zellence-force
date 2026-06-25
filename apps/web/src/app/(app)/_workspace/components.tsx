@@ -1,13 +1,14 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import type {
   ApplicantReviewQueueItem,
   StaffPoolItem,
   WhatsAppInboundMessage
 } from "@zellforce/contracts";
 import type { StatusTone } from "@zellforce/ui/components/badge";
-import { ImageIcon } from "lucide-react";
+import { ArrowRight, ImageIcon } from "lucide-react";
 import { AlertBanner } from "@zellforce/ui/components/alert";
 import { StatusBadge } from "@zellforce/ui/components/badge";
 import { Button } from "@zellforce/ui/components/button";
@@ -15,10 +16,11 @@ import {
   contractTone,
   initials,
   interviewTone,
-  labelize,
   screeningTone,
   whatsAppTone
 } from "./helpers";
+import { useStatusLabels } from "./status-labels";
+import { CandidatePhoto } from "./candidate-photo";
 
 export function MetricPanel({
   icon,
@@ -76,7 +78,7 @@ export function CandidateIdentity({
   return (
     <div className={compact ? "candidate-identity candidate-identity--compact" : "candidate-identity"}>
       <div className="candidate-avatar" aria-hidden>
-        {row.photoUrl ? <img src={row.photoUrl} alt="" /> : initials(row.fullName)}
+        <CandidatePhoto url={row.photoUrl} fallback={initials(row.fullName)} />
       </div>
       <div>
         <strong>{row.fullName ?? "Unnamed candidate"}</strong>
@@ -89,13 +91,14 @@ export function CandidateIdentity({
 export function CandidateMedia({ row }: { row: ApplicantReviewQueueItem }) {
   return (
     <div className="candidate-media">
-      {row.photoUrl ? (
-        <img src={row.photoUrl} alt="" />
-      ) : (
-        <div className="candidate-media__empty">
-          <ImageIcon aria-hidden />
-        </div>
-      )}
+      <CandidatePhoto
+        url={row.photoUrl}
+        fallback={
+          <div className="candidate-media__empty">
+            <ImageIcon aria-hidden />
+          </div>
+        }
+      />
       <div className="candidate-media__links">
         {row.cvUrl ? <a href={row.cvUrl} target="_blank" rel="noreferrer">Open CV</a> : <span>No CV link</span>}
         {row.photoUrl ? <a href={row.photoUrl} target="_blank" rel="noreferrer">Open photo</a> : <span>No photo link</span>}
@@ -123,23 +126,25 @@ export function RawDataBlock({ data }: { data: Record<string, unknown> }) {
 }
 
 export function CandidateLine({ row }: { row: ApplicantReviewQueueItem }) {
+  const labels = useStatusLabels();
   return (
     <div className="candidate-line">
       <CandidateIdentity row={row} compact />
       <div className="flag-list">
-        <StatusBadge tone={screeningTone(row.screeningStatus)} label={labelize(row.screeningStatus)} />
-        <StatusBadge tone={interviewTone(row.interviewStatus)} label={labelize(row.interviewStatus)} />
+        <StatusBadge tone={screeningTone(row.screeningStatus)} label={labels.screening(row.screeningStatus)} />
+        <StatusBadge tone={interviewTone(row.interviewStatus)} label={labels.interview(row.interviewStatus)} />
       </div>
     </div>
   );
 }
 
 export function MessageCard({ message }: { message: WhatsAppInboundMessage }) {
+  const labels = useStatusLabels();
   return (
     <article className={message.isEmergency ? "message-card message-card--danger" : "message-card"}>
       <div>
         <strong>{message.matchedName ?? message.fromPhone}</strong>
-        <StatusBadge tone={whatsAppTone(message.intent, message.isEmergency)} label={labelize(message.intent)} />
+        <StatusBadge tone={whatsAppTone(message.intent, message.isEmergency)} label={labels.whatsapp(message.intent)} />
       </div>
       <p>{message.body}</p>
       <span>{new Date(message.receivedAt).toLocaleString()}</span>
@@ -158,6 +163,40 @@ export function ProgressValue({ label, value }: { label: string; value: number }
 
 export function EmptyLine({ label }: { label: string }) {
   return <div className="empty-line">{label}</div>;
+}
+
+// Guided empty state: shown when a list has no rows. Beyond saying "nothing
+// here", it tells a new user the next concrete step and links them to the page
+// that performs it (e.g. an empty screening table -> "Import candidates" ->
+// /candidates/import), so the pipeline is discoverable without a tour.
+export function EmptyState({
+  icon,
+  title,
+  description,
+  actionLabel,
+  actionHref
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  actionLabel?: string;
+  actionHref?: string;
+}) {
+  return (
+    <div className="empty-state">
+      <span className="empty-state__icon" aria-hidden>{icon}</span>
+      <strong className="empty-state__title">{title}</strong>
+      <p className="empty-state__description">{description}</p>
+      {actionLabel && actionHref ? (
+        <Button asChild size="sm">
+          <Link href={actionHref}>
+            {actionLabel}
+            <ArrowRight size={16} aria-hidden />
+          </Link>
+        </Button>
+      ) : null}
+    </div>
+  );
 }
 
 export function WorkspaceHeader({

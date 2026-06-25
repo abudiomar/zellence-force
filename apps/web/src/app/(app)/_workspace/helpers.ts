@@ -92,10 +92,6 @@ export function whatsAppTone(intent: WhatsAppInboundMessage["intent"], emergency
   return "neutral";
 }
 
-export function labelize(value: string): string {
-  return value.replaceAll("_", " ");
-}
-
 export function initials(name: string | null | undefined): string {
   if (!name) return "?";
   return name

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import type {
   ApplicantReviewQueueItem,
   DemoContractStatus,
@@ -18,6 +19,7 @@ import { ApplicantsTable } from "../../_workspace/applicants-table";
 import {
   CandidateIdentity,
   EmptyLine,
+  EmptyState,
   PanelHeader,
   WorkspaceFeedback,
   WorkspaceHeader
@@ -27,13 +29,16 @@ import {
   contractStatuses,
   formatScoreInput,
   interviewStatuses,
-  labelize,
   parseScore
 } from "../../_workspace/helpers";
+import { useStatusLabels } from "../../_workspace/status-labels";
 import { useWorkspaceData } from "../../_workspace/use-workspace-data";
 
 export function InterviewsClient() {
   const { data, state, busy, status, error, reload, runBusy } = useWorkspaceData({ queue: true });
+  const labels = useStatusLabels();
+  const t = useTranslations("app.workspace");
+  const tg = useTranslations("app.workspace.guided");
   const [selected, setSelected] = React.useState<ApplicantReviewQueueItem | null>(null);
   const [interviewStatus, setInterviewStatus] = React.useState<InterviewStatus>("not_scheduled");
   const [contractSent, setContractSent] = React.useState(false);
@@ -82,7 +87,7 @@ export function InterviewsClient() {
     return (
       <section className="screen-state">
         <h2>Unable to load interview pipeline</h2>
-        <Button type="button" onClick={reload}>Retry</Button>
+        <Button type="button" onClick={reload}>{t("retry")}</Button>
       </section>
     );
   }
@@ -90,17 +95,28 @@ export function InterviewsClient() {
   return (
     <div className="candidate-workspace">
       <WorkspaceHeader
-        eyebrow="Interviews"
-        title="Score interviews and track contract progress"
+        eyebrow={t("interviewsEyebrow")}
+        title={t("interviewsTitle")}
         actions={
           <Button type="button" variant="secondary" onClick={reload}>
-            <RefreshCw aria-hidden />Refresh
+            <RefreshCw aria-hidden />{t("refresh")}
           </Button>
         }
       />
 
       <WorkspaceFeedback status={status} error={error} />
 
+      {interviewRows.length === 0 ? (
+        <div className="candidate-panel">
+          <EmptyState
+            icon={<Star />}
+            title={tg("interviewsTitle")}
+            description={tg("interviewsBody")}
+            actionLabel={tg("interviewsAction")}
+            actionHref="/candidates"
+          />
+        </div>
+      ) : (
       <section className="candidate-two-column">
         <div className="candidate-panel candidate-panel--table">
           <PanelHeader icon={<Star />} title="Interview Pipeline" />
@@ -108,7 +124,7 @@ export function InterviewsClient() {
             rows={interviewRows}
             selectedId={selected?.id}
             onRowActivate={setSelected}
-            emptyLabel="No candidates in the interview pipeline yet"
+            emptyLabel={t("emptyInterviewPipeline")}
           />
         </div>
         <aside className="candidate-panel candidate-detail-panel">
@@ -119,12 +135,12 @@ export function InterviewsClient() {
               <div className="candidate-form-grid">
                 <Field label="Interview status">
                   <Select value={interviewStatus} onChange={(event) => setInterviewStatus(event.currentTarget.value as InterviewStatus)}>
-                    {interviewStatuses.map((value) => <option key={value} value={value}>{labelize(value)}</option>)}
+                    {interviewStatuses.map((value) => <option key={value} value={value}>{labels.interview(value)}</option>)}
                   </Select>
                 </Field>
                 <Field label="Contract status">
                   <Select value={contractStatus} onChange={(event) => setContractStatus(event.currentTarget.value as DemoContractStatus)}>
-                    {contractStatuses.map((value) => <option key={value} value={value}>{labelize(value)}</option>)}
+                    {contractStatuses.map((value) => <option key={value} value={value}>{labels.contract(value)}</option>)}
                   </Select>
                 </Field>
               </div>
@@ -144,7 +160,7 @@ export function InterviewsClient() {
                 </Field>
               </div>
               <div className="score-preview">
-                <span>Final score</span>
+                <span>{t("finalScore")}</span>
                 <strong>{averagePreview([presentationScore, communicationScore, englishScore])}</strong>
               </div>
               <Button type="button" loading={busy} onClick={() => void runBusy(async () => {
@@ -160,14 +176,15 @@ export function InterviewsClient() {
                 });
                 return "Interview pipeline updated";
               })}>
-                <Save aria-hidden />Save interview
+                <Save aria-hidden />{t("saveInterview")}
               </Button>
             </>
           ) : (
-            <EmptyLine label="No candidate selected" />
+            <EmptyLine label={t("noCandidateSelected")} />
           )}
         </aside>
       </section>
+      )}
     </div>
   );
 }
