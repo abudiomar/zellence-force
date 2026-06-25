@@ -1410,7 +1410,7 @@ a.cv-photo:hover .cv-photo__hint {
 
 /* Minimalist screening filter bar: a search box, a few toggle chips, and a
  * gender segment. Sits between the panel header and the table. */
-.screening-filters {
+.filter-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1418,7 +1418,7 @@ a.cv-photo:hover .cv-photo__hint {
   margin-bottom: 12px;
 }
 
-.screening-filters__search {
+.filter-search {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1432,7 +1432,7 @@ a.cv-photo:hover .cv-photo__hint {
   color: hsl(var(--muted-foreground));
 }
 
-.screening-filters__search input {
+.filter-search input {
   flex: 1;
   border: 0;
   background: transparent;
@@ -1441,7 +1441,7 @@ a.cv-photo:hover .cv-photo__hint {
   color: hsl(var(--foreground));
 }
 
-.screening-filters__chips {
+.filter-bar__controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1471,7 +1471,7 @@ a.cv-photo:hover .cv-photo__hint {
   color: hsl(var(--primary-foreground));
 }
 
-.screening-filters__segmented {
+.filter-segment {
   display: inline-flex;
   border-radius: 999px;
   border: 1px solid hsl(var(--border));
@@ -1479,7 +1479,7 @@ a.cv-photo:hover .cv-photo__hint {
   padding: 2px;
 }
 
-.screening-filters__segmented button {
+.filter-segment button {
   height: 30px;
   padding-inline: 12px;
   border: 0;
@@ -1492,26 +1492,26 @@ a.cv-photo:hover .cv-photo__hint {
   transition: background-color 160ms ease, color 160ms ease;
 }
 
-.screening-filters__segmented button[data-active] {
+.filter-segment button[data-active] {
   background: hsl(var(--card));
   color: hsl(var(--foreground));
   box-shadow: 0 1px 2px rgb(23 21 19 / 8%);
 }
 
-.screening-filters__meta {
+.filter-bar__meta {
   display: inline-flex;
   align-items: center;
   gap: 12px;
   margin-inline-start: auto;
 }
 
-.screening-filters__count {
+.filter-bar__count {
   font-size: 13px;
   color: hsl(var(--muted-foreground));
   white-space: nowrap;
 }
 
-.screening-filters__clear {
+.filter-bar__clear {
   border: 0;
   background: transparent;
   color: hsl(var(--primary));
@@ -1520,12 +1520,12 @@ a.cv-photo:hover .cv-photo__hint {
   cursor: pointer;
 }
 
-.screening-filters__clear:hover {
+.filter-bar__clear:hover {
   text-decoration: underline;
 }
 
-/* Age range: two compact number inputs inside a pill. */
-.screening-filters__age {
+/* Numeric range (age, score): two compact number inputs inside a pill. */
+.filter-range {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1538,7 +1538,7 @@ a.cv-photo:hover .cv-photo__hint {
   font-weight: 600;
 }
 
-.screening-filters__age input {
+.filter-range input {
   width: 44px;
   border: 0;
   background: transparent;
@@ -1550,13 +1550,13 @@ a.cv-photo:hover .cv-photo__hint {
   -moz-appearance: textfield;
 }
 
-.screening-filters__age input::-webkit-outer-spin-button,
-.screening-filters__age input::-webkit-inner-spin-button {
+.filter-range input::-webkit-outer-spin-button,
+.filter-range input::-webkit-inner-spin-button {
   appearance: none;
   margin: 0;
 }
 
-.screening-filters__age > span:first-child {
+.filter-range > span:first-child {
   color: hsl(var(--muted-foreground));
 }
 

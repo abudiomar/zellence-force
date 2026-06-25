@@ -141,6 +141,16 @@ export async function listStaffPool(filter: StaffPoolFilter = {}): Promise<Staff
   return response.json() as Promise<StaffPoolItem[]>;
 }
 
+export async function removeStaffPoolCandidate(rowId: string): Promise<void> {
+  const response = await fetch(`${getPublicEnv().NEXT_PUBLIC_API_URL}/api/staff-pool/${rowId}`, {
+    method: "DELETE",
+    credentials: "include"
+  });
+  if (!response.ok) {
+    throw new Error("Unable to delete staff pool candidate");
+  }
+}
+
 export async function listDemoEvents(): Promise<DemoEvent[]> {
   const response = await fetch(`${getPublicEnv().NEXT_PUBLIC_API_URL}/api/demo-events`, {
     credentials: "include"

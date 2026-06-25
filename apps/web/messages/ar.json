@@ -94,6 +94,8 @@
         "experience": "مجال الخبرة",
         "city": "المدينة",
         "nationality": "الجنسية",
+        "language": "اللغة",
+        "score": "التقييم",
         "canTravel": "قابل للسفر",
         "gender": "الجنس",
         "genderAll": "الكل",

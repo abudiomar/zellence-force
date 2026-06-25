@@ -161,6 +161,7 @@ function baseApplicants(overrides: Partial<ApplicantImportRepository> = {}): App
         createdAt: "2026-06-12T00:00:00.000Z"
       }
     ]),
+    removeFromStaffPool: vi.fn(async () => true),
     createDemoEvent: vi.fn(async () => ({
       id: "demo-event-1",
       name: "Riyadh Launch",
@@ -378,7 +379,10 @@ describe("Applicant API routes", () => {
   });
 
   test("saves applicants to staff pool, filters staff, and manages demo event shortlist", async () => {
-    const server = app({});
+    const applicants = baseApplicants({
+      removeFromStaffPool: vi.fn(async () => true)
+    } as Partial<ApplicantImportRepository>);
+    const server = app({ applicants });
 
     const save = await request(server)
       .post("/api/applicants/review-queue/row-1/save-to-staff")
@@ -405,6 +409,14 @@ describe("Applicant API routes", () => {
       .send({ applicantRowId: "row-1", personId: "person-1" });
     expect(shortlisted.status).toBe(200);
     expect(shortlisted.body.shortlisted).toBe(1);
+
+    const deleted = await request(server).delete("/api/staff-pool/row-1");
+    expect(deleted.status).toBe(204);
+    expect(applicants.removeFromStaffPool).toHaveBeenCalledWith({
+      tenantId: "tenant-a",
+      actorUserId: "hr-user",
+      rowId: "row-1"
+    });
   });
 
   test("verifies Meta WhatsApp webhook and records emergency inbound messages", async () => {

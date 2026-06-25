@@ -275,6 +275,8 @@ create table if not exists applicant_import_rows (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id) on delete cascade,
   import_run_id uuid not null references applicant_import_runs(id) on delete cascade,
+  source_id text not null,
+  source_range text not null,
   source_row_id text not null,
   source_hash text not null,
   raw_data jsonb not null,
@@ -289,6 +291,7 @@ create table if not exists applicant_import_rows (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (tenant_id, import_run_id, source_row_id),
+  unique (tenant_id, source_id, source_range, source_row_id),
   unique (tenant_id, source_hash)
 );
 

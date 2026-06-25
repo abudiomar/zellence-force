@@ -40,6 +40,8 @@ type SettingsRow = {
 
 type ApplicantImportRow = {
   id: string;
+  source_id?: string | null;
+  source_range?: string | null;
   source_row_id: string;
   status: ApplicantReviewQueueItem["status"];
   raw_data: Record<string, unknown> | string | null;
@@ -290,14 +292,14 @@ export function createPgApplicantImportRepository(client: DbClient): ApplicantIm
       const result = await client.query(
         `
           insert into applicant_import_rows (
-            tenant_id, import_run_id, source_row_id, source_hash, raw_data,
-            mapped_data, status, error_messages, matched_person_id
+            tenant_id, import_run_id, source_id, source_range, source_row_id,
+            source_hash, raw_data, mapped_data, status, error_messages,
+            matched_person_id
           )
-          values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          on conflict (tenant_id, source_hash)
+          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          on conflict (tenant_id, source_id, source_range, source_row_id)
           do update set
             import_run_id = excluded.import_run_id,
-            source_row_id = excluded.source_row_id,
             source_hash = excluded.source_hash,
             raw_data = excluded.raw_data,
             mapped_data = excluded.mapped_data,
@@ -310,6 +312,8 @@ export function createPgApplicantImportRepository(client: DbClient): ApplicantIm
         [
           input.tenantId,
           input.importRunId,
+          input.sourceId,
+          input.sourceRange,
           input.sourceRowId,
           input.sourceHash,
           JSON.stringify(input.rawData),
@@ -599,6 +603,42 @@ export function createPgApplicantImportRepository(client: DbClient): ApplicantIm
       return result.rows
         .map(mapStaffPoolRow)
         .filter((item) => staffPoolItemMatchesFilter(item, input.filter));
+    },
+
+    async removeFromStaffPool(input) {
+      const result = await client.query(
+        `
+          with target as (
+            select created_person_id
+            from applicant_import_rows
+            where tenant_id = $1
+              and id = $2
+              and (
+                saved_to_staff_at is not null
+                or saved_for_future_at is not null
+                or screening_status in ('save_to_staff_pool', 'save_for_future')
+              )
+          ),
+          deleted as (
+            delete from applicant_import_rows
+            where tenant_id = $1
+              and id = $2
+              and exists (select 1 from target)
+            returning id
+          ),
+          deactivated as (
+            update persons
+            set status = 'inactive'::person_status,
+                updated_at = now()
+            where tenant_id = $1
+              and id in (select created_person_id from target where created_person_id is not null)
+            returning id
+          )
+          select count(*)::int as deleted_count from deleted
+        `,
+        [input.tenantId, input.rowId]
+      );
+      return Number((result.rows[0] as { deleted_count?: number | string } | undefined)?.deleted_count ?? 0) > 0;
     },
 
     async createDemoEvent(input) {

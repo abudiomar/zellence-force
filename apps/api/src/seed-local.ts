@@ -198,7 +198,7 @@ async function main() {
     await pool.query(
       `
         insert into applicant_import_rows (
-          tenant_id, import_run_id, source_row_id, source_hash,
+          tenant_id, import_run_id, source_id, source_range, source_row_id, source_hash,
           raw_data, mapped_data, status, error_messages, created_person_id,
           screening_status, screening_notes, interview_status, contract_sent,
           contract_status, presentation_score, communication_score,
@@ -206,7 +206,7 @@ async function main() {
         )
         values
           (
-            $1, $2, '2', 'local-demo-sara-ahmed-v2',
+            $1, $2, 'local-demo', 'Form Responses 1!A:Z', '2', 'local-demo-sara-ahmed-v2',
             '{"Full Name":"Sara Ahmed","Mobile":"+966500000000","Email":"sara@example.com","City":"Riyadh","Gender":"female","Age":"25","Photo":"https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&q=80","CV":"https://example.com/demo/sara-ahmed-cv.pdf","Experience":"Luxury retail event hostess"}'::jsonb,
             '{"fullName":"Sara Ahmed","phone":"+966500000000","email":"sara@example.com","city":"Riyadh","gender":"female","age":"25","photoUrl":"https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&q=80","cvUrl":"https://example.com/demo/sara-ahmed-cv.pdf","experience":"Luxury retail event hostess"}'::jsonb,
             'accepted', '[]'::jsonb, $3,
@@ -214,7 +214,7 @@ async function main() {
             'passed', true, 'signed', 4.5, 4.7, 4.2, 4.47, now(), null
           ),
           (
-            $1, $2, '3', 'local-demo-omar-khalid-v2',
+            $1, $2, 'local-demo', 'Form Responses 1!A:Z', '3', 'local-demo-omar-khalid-v2',
             '{"Full Name":"Omar Khalid","Mobile":"+966511111111","Email":"omar@example.com","City":"Riyadh","Gender":"male","Age":"27","Photo":"https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&q=80","CV":"https://example.com/demo/omar-khalid-cv.pdf","Experience":"Usher and crowd flow lead"}'::jsonb,
             '{"fullName":"Omar Khalid","phone":"+966511111111","email":"omar@example.com","city":"Riyadh","gender":"male","age":"27","photoUrl":"https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&q=80","cvUrl":"https://example.com/demo/omar-khalid-cv.pdf","experience":"Usher and crowd flow lead"}'::jsonb,
             'pending_review', '[]'::jsonb, $4,
@@ -222,7 +222,7 @@ async function main() {
             'scheduled', false, 'not_sent', null, null, null, null, null, null
           ),
           (
-            $1, $2, '4', 'local-demo-lina-mansour-v2',
+            $1, $2, 'local-demo', 'Form Responses 1!A:Z', '4', 'local-demo-lina-mansour-v2',
             '{"Full Name":"Lina Mansour","Mobile":"+966522222222","Email":"lina@example.com","City":"Jeddah","Gender":"female","Age":"32","Photo":"https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&q=80","CV":"https://example.com/demo/lina-mansour-cv.pdf","Experience":"Senior brand ambassador and trainer"}'::jsonb,
             '{"fullName":"Lina Mansour","phone":"+966522222222","email":"lina@example.com","city":"Jeddah","gender":"female","age":"32","photoUrl":"https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&q=80","cvUrl":"https://example.com/demo/lina-mansour-cv.pdf","experience":"Senior brand ambassador and trainer"}'::jsonb,
             'deferred', '[]'::jsonb, null,
@@ -230,7 +230,7 @@ async function main() {
             'not_scheduled', false, 'not_sent', null, null, null, null, null, now()
           ),
           (
-            $1, $2, '5', 'local-demo-noura-saleh-v2',
+            $1, $2, 'local-demo', 'Form Responses 1!A:Z', '5', 'local-demo-noura-saleh-v2',
             '{"Full Name":"Noura Saleh","Mobile":"+966533333333","Email":"noura@example.com","City":"Dammam","Gender":"female","Age":"18","Photo":"","CV":"","Experience":"No event experience yet"}'::jsonb,
             '{"fullName":"Noura Saleh","phone":"+966533333333","email":"noura@example.com","city":"Dammam","gender":"female","age":"18","experience":"No event experience yet"}'::jsonb,
             'pending_review', '[]'::jsonb, null,
@@ -238,14 +238,16 @@ async function main() {
             'not_scheduled', false, 'not_sent', null, null, null, null, null, null
           ),
           (
-            $1, $2, '6', 'local-demo-missing-phone-v2',
+            $1, $2, 'local-demo', 'Form Responses 1!A:Z', '6', 'local-demo-missing-phone-v2',
             '{"Full Name":"Missing Phone","Mobile":"","Email":"missing-phone@example.com","City":"Jeddah"}'::jsonb,
             null,
             'error', '["phone is required"]'::jsonb, null,
             'needs_review', null, 'not_scheduled', false, 'not_sent',
             null, null, null, null, null, null
           )
-        on conflict (tenant_id, source_hash) do update set
+        on conflict (tenant_id, source_id, source_range, source_row_id) do update set
+          import_run_id = excluded.import_run_id,
+          source_hash = excluded.source_hash,
           raw_data = excluded.raw_data,
           mapped_data = excluded.mapped_data,
           status = excluded.status,

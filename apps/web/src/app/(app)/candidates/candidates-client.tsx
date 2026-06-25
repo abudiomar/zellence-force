@@ -3,7 +3,7 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import type { ApplicantReviewQueueItem, ScreeningStatus } from "@zellforce/contracts";
-import { Check, CheckCircle2, ChevronDown, ClipboardList, Maximize2, RefreshCw, Search, UserCheck, XCircle } from "lucide-react";
+import { CheckCircle2, ClipboardList, Maximize2, RefreshCw, UserCheck, XCircle } from "lucide-react";
 import { AlertDialog } from "@zellforce/ui/components/alert-dialog";
 import { StatusBadge } from "@zellforce/ui/components/badge";
 import { Button } from "@zellforce/ui/components/button";
@@ -15,11 +15,16 @@ import {
   DialogTitle
 } from "@zellforce/ui/components/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@zellforce/ui/components/dropdown-menu";
+  FilterBar,
+  FilterChip,
+  FilterSearch,
+  GenderSegment,
+  MultiSelectFilter,
+  RangePill,
+  distinctMultiOptions,
+  distinctOptions,
+  type FilterOption
+} from "../_workspace/filters";
 import { Field } from "@zellforce/ui/components/label";
 import { Select } from "@zellforce/ui/components/select";
 import { Skeleton } from "@zellforce/ui/components/skeleton";
@@ -42,218 +47,17 @@ import {
 } from "../_workspace/components";
 import { useStatusLabels } from "../_workspace/status-labels";
 import { calculateMetrics, useWorkspaceData } from "../_workspace/use-workspace-data";
+import {
+  EMPTY_FILTERS,
+  matchesScreeningFilters,
+  screeningFiltersActive,
+  type ScreeningFilters
+} from "./candidates-filter";
 
 type StaffSaveReason = Extract<ScreeningStatus, "needs_review" | "underqualified" | "overqualified">;
 type StaffSaveDialogState = {
   rowIds: string[];
 };
-
-// Minimalist screening filters: just enough to weed out obviously unsuitable
-// applicants before reviewing them one by one. All client-side over the already
-// loaded queue, so toggling is instant and needs no API round-trip.
-type GenderFilter = "" | "male" | "female";
-type ScreeningFilters = {
-  search: string;
-  gender: GenderFilter;
-  canTravel: boolean;
-  minAge: string;
-  maxAge: string;
-  cities: string[];
-  nationalities: string[];
-  experiences: string[];
-};
-
-const EMPTY_FILTERS: ScreeningFilters = {
-  search: "",
-  gender: "",
-  canTravel: false,
-  minAge: "",
-  maxAge: "",
-  cities: [],
-  nationalities: [],
-  experiences: []
-};
-
-type FilterOption = { key: string; label: string };
-
-const MALE_TOKENS = new Set(["male", "m", "man", "ذكر", "رجل"]);
-const FEMALE_TOKENS = new Set(["female", "f", "woman", "أنثى", "انثى", "امرأة"]);
-
-function matchesGender(value: string | null | undefined, target: GenderFilter): boolean {
-  if (!target) return true;
-  const normalized = (value ?? "").trim().toLowerCase();
-  return target === "male" ? MALE_TOKENS.has(normalized) : FEMALE_TOKENS.has(normalized);
-}
-
-// Capitalize each word for a consistent display label, regardless of how the
-// applicant typed it ("ethiopian"/"ETHIOPIAN" -> "Ethiopian"). Arabic is
-// unaffected by case so it passes through unchanged.
-function titleCase(value: string): string {
-  return value.toLowerCase().replace(/(^|\s)(\p{L})/gu, (_match, lead: string, char: string) => lead + char.toUpperCase());
-}
-
-// Multi-value form answers (experience, languages) come back comma-separated,
-// like the predefined checkbox options in the Google Form. Split on the common
-// separators so each option is filterable on its own.
-function splitListValue(value: string): string[] {
-  return value
-    .split(/[,،/;]|\s+(?:and|و)\s+/gi)
-    .map((part) => part.trim())
-    .filter(Boolean);
-}
-
-// Build a normalized, de-duplicated, sorted option list from a single-value
-// field across the loaded candidates. Keyed by lowercase (so different casings
-// collapse), labelled in title case.
-function distinctOptions(
-  rows: ApplicantReviewQueueItem[],
-  getValue: (row: ApplicantReviewQueueItem) => string | null | undefined
-): FilterOption[] {
-  const byKey = new Map<string, string>();
-  for (const row of rows) {
-    const trimmed = (getValue(row) ?? "").trim();
-    if (!trimmed) continue;
-    const key = trimmed.toLowerCase();
-    if (!byKey.has(key)) byKey.set(key, titleCase(trimmed));
-  }
-  return [...byKey.entries()]
-    .map(([key, label]) => ({ key, label }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-}
-
-// Same, but for a comma-separated multi-value field (experience).
-function distinctMultiOptions(
-  rows: ApplicantReviewQueueItem[],
-  getValue: (row: ApplicantReviewQueueItem) => string | null | undefined
-): FilterOption[] {
-  const byKey = new Map<string, string>();
-  for (const row of rows) {
-    for (const part of splitListValue(getValue(row) ?? "")) {
-      const key = part.toLowerCase();
-      if (!byKey.has(key)) byKey.set(key, titleCase(part));
-    }
-  }
-  return [...byKey.entries()]
-    .map(([key, label]) => ({ key, label }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-}
-
-function matchesScreeningFilters(row: ApplicantReviewQueueItem, filters: ScreeningFilters): boolean {
-  if (filters.search) {
-    const query = filters.search.trim().toLowerCase();
-    if (query && !`${row.fullName ?? ""} ${row.phone ?? ""}`.toLowerCase().includes(query)) {
-      return false;
-    }
-  }
-  if (filters.canTravel && row.canTravel !== true) return false;
-  if (!matchesGender(row.gender, filters.gender)) return false;
-
-  const min = filters.minAge.trim() ? Number(filters.minAge) : null;
-  const max = filters.maxAge.trim() ? Number(filters.maxAge) : null;
-  if (min !== null && Number.isFinite(min) && (row.age == null || row.age < min)) return false;
-  if (max !== null && Number.isFinite(max) && (row.age == null || row.age > max)) return false;
-
-  if (filters.cities.length > 0 && !filters.cities.includes((row.city ?? "").trim().toLowerCase())) {
-    return false;
-  }
-  if (
-    filters.nationalities.length > 0 &&
-    !filters.nationalities.includes((row.nationality ?? "").trim().toLowerCase())
-  ) {
-    return false;
-  }
-  if (filters.experiences.length > 0) {
-    const experiences = splitListValue(row.experience ?? "").map((value) => value.toLowerCase());
-    if (!filters.experiences.some((selected) => experiences.includes(selected))) return false;
-  }
-  return true;
-}
-
-function screeningFiltersActive(filters: ScreeningFilters): boolean {
-  return (
-    filters.search.trim() !== "" ||
-    filters.gender !== "" ||
-    filters.canTravel ||
-    filters.minAge.trim() !== "" ||
-    filters.maxAge.trim() !== "" ||
-    filters.cities.length > 0 ||
-    filters.nationalities.length > 0 ||
-    filters.experiences.length > 0
-  );
-}
-
-function FilterChip({
-  active,
-  onClick,
-  children
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      className="filter-chip"
-      data-active={active || undefined}
-      aria-pressed={active}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  );
-}
-
-// Dynamic multi-select: a compact trigger that opens a checklist of the options
-// discovered in the candidate set. Stays open while ticking several values.
-function MultiSelectFilter({
-  label,
-  options,
-  selected,
-  onChange,
-  emptyLabel
-}: {
-  label: string;
-  options: FilterOption[];
-  selected: string[];
-  onChange: (next: string[]) => void;
-  emptyLabel: string;
-}) {
-  const toggle = (key: string) =>
-    onChange(selected.includes(key) ? selected.filter((value) => value !== key) : [...selected, key]);
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" className="filter-chip filter-select" data-active={selected.length > 0 || undefined}>
-          <span>{label}</span>
-          {selected.length > 0 ? <span className="filter-select__count">{selected.length}</span> : null}
-          <ChevronDown size={14} aria-hidden />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="filter-select__menu">
-        {options.length === 0 ? (
-          <div className="filter-select__empty">{emptyLabel}</div>
-        ) : (
-          options.map((option) => (
-            <DropdownMenuItem
-              key={option.key}
-              onSelect={(event) => {
-                event.preventDefault();
-                toggle(option.key);
-              }}
-            >
-              <span className="filter-select__check">
-                {selected.includes(option.key) ? <Check size={14} aria-hidden /> : null}
-              </span>
-              <span>{option.label}</span>
-            </DropdownMenuItem>
-          ))
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
 
 function ScreeningFilterBar({
   filters,
@@ -262,6 +66,7 @@ function ScreeningFilterBar({
   total,
   cityOptions,
   nationalityOptions,
+  languageOptions,
   experienceOptions
 }: {
   filters: ScreeningFilters;
@@ -270,96 +75,68 @@ function ScreeningFilterBar({
   total: number;
   cityOptions: FilterOption[];
   nationalityOptions: FilterOption[];
+  languageOptions: FilterOption[];
   experienceOptions: FilterOption[];
 }) {
   const t = useTranslations("app.workspace.screen");
   const update = (patch: Partial<ScreeningFilters>) => setFilters((prev) => ({ ...prev, ...patch }));
-  const genders: GenderFilter[] = ["", "male", "female"];
 
   return (
-    <div className="screening-filters">
-      <div className="screening-filters__search">
-        <Search size={16} aria-hidden />
-        <input
-          type="search"
+    <FilterBar
+      shown={shown}
+      total={total}
+      active={screeningFiltersActive(filters)}
+      onClear={() => setFilters(EMPTY_FILTERS)}
+      search={
+        <FilterSearch
           value={filters.search}
-          onChange={(event) => update({ search: event.currentTarget.value })}
+          onChange={(search) => update({ search })}
           placeholder={t("searchPlaceholder")}
-          aria-label={t("searchPlaceholder")}
         />
-      </div>
-      <div className="screening-filters__chips">
-        <div className="screening-filters__age" role="group" aria-label={t("age")}>
-          <span>{t("age")}</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={100}
-            value={filters.minAge}
-            onChange={(event) => update({ minAge: event.currentTarget.value })}
-            placeholder={t("ageMin")}
-            aria-label={t("ageMin")}
-          />
-          <span aria-hidden>–</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={100}
-            value={filters.maxAge}
-            onChange={(event) => update({ maxAge: event.currentTarget.value })}
-            placeholder={t("ageMax")}
-            aria-label={t("ageMax")}
-          />
-        </div>
-        <MultiSelectFilter
-          label={t("experience")}
-          options={experienceOptions}
-          selected={filters.experiences}
-          onChange={(experiences) => update({ experiences })}
-          emptyLabel={t("noOptions")}
-        />
-        <MultiSelectFilter
-          label={t("city")}
-          options={cityOptions}
-          selected={filters.cities}
-          onChange={(cities) => update({ cities })}
-          emptyLabel={t("noOptions")}
-        />
-        <MultiSelectFilter
-          label={t("nationality")}
-          options={nationalityOptions}
-          selected={filters.nationalities}
-          onChange={(nationalities) => update({ nationalities })}
-          emptyLabel={t("noOptions")}
-        />
-        <FilterChip active={filters.canTravel} onClick={() => update({ canTravel: !filters.canTravel })}>
-          {t("canTravel")}
-        </FilterChip>
-        <div className="screening-filters__segmented" role="group" aria-label={t("gender")}>
-          {genders.map((gender) => (
-            <button
-              key={gender || "all"}
-              type="button"
-              data-active={filters.gender === gender || undefined}
-              aria-pressed={filters.gender === gender}
-              onClick={() => update({ gender })}
-            >
-              {gender === "" ? t("genderAll") : gender === "male" ? t("male") : t("female")}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="screening-filters__meta">
-        <span className="screening-filters__count">{t("showing", { shown, total })}</span>
-        {screeningFiltersActive(filters) ? (
-          <button type="button" className="screening-filters__clear" onClick={() => setFilters(EMPTY_FILTERS)}>
-            {t("clear")}
-          </button>
-        ) : null}
-      </div>
-    </div>
+      }
+    >
+      <RangePill
+        label={t("age")}
+        minValue={filters.minAge}
+        maxValue={filters.maxAge}
+        onMinChange={(minAge) => update({ minAge })}
+        onMaxChange={(maxAge) => update({ maxAge })}
+        minPlaceholder={t("ageMin")}
+        maxPlaceholder={t("ageMax")}
+      />
+      <MultiSelectFilter
+        label={t("experience")}
+        options={experienceOptions}
+        selected={filters.experiences}
+        onChange={(experiences) => update({ experiences })}
+        emptyLabel={t("noOptions")}
+      />
+      <MultiSelectFilter
+        label={t("language")}
+        options={languageOptions}
+        selected={filters.languages}
+        onChange={(languages) => update({ languages })}
+        emptyLabel={t("noOptions")}
+      />
+      <MultiSelectFilter
+        label={t("city")}
+        options={cityOptions}
+        selected={filters.cities}
+        onChange={(cities) => update({ cities })}
+        emptyLabel={t("noOptions")}
+      />
+      <MultiSelectFilter
+        label={t("nationality")}
+        options={nationalityOptions}
+        selected={filters.nationalities}
+        onChange={(nationalities) => update({ nationalities })}
+        emptyLabel={t("noOptions")}
+      />
+      <FilterChip active={filters.canTravel} onClick={() => update({ canTravel: !filters.canTravel })}>
+        {t("canTravel")}
+      </FilterChip>
+      <GenderSegment value={filters.gender} onChange={(gender) => update({ gender })} />
+    </FilterBar>
   );
 }
 
@@ -388,6 +165,7 @@ export function CandidatesClient() {
   // ticking one value doesn't make the others disappear.
   const cityOptions = React.useMemo(() => distinctOptions(rows, (row) => row.city), [rows]);
   const nationalityOptions = React.useMemo(() => distinctOptions(rows, (row) => row.nationality), [rows]);
+  const languageOptions = React.useMemo(() => distinctMultiOptions(rows, (row) => row.languages), [rows]);
   const experienceOptions = React.useMemo(() => distinctMultiOptions(rows, (row) => row.experience), [rows]);
   const selectedRows = rows.filter((row) => selectedRowIds.has(row.id));
   const selectedCount = selectedRows.length;
@@ -616,6 +394,7 @@ export function CandidatesClient() {
             total={rows.length}
             cityOptions={cityOptions}
             nationalityOptions={nationalityOptions}
+            languageOptions={languageOptions}
             experienceOptions={experienceOptions}
           />
           <ApplicantsTable

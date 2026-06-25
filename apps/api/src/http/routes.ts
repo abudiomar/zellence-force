@@ -17,6 +17,7 @@ import {
   handleWhatsAppInbound,
   previewApplicantSheetHeaders,
   recordInterviewScore,
+  removeStaffPoolCandidate,
   saveApplicantToStaffPool,
   scheduleInterview,
   setInternalUserActive,
@@ -291,6 +292,19 @@ export function registerRoutes(
           filter
         )
       );
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete("/api/staff-pool/:id", options.requireActor, async (req, res, next) => {
+    try {
+      await removeStaffPoolCandidate(
+        { applicants: applicantsDeps.applicants },
+        (req as ActorRequest).actor,
+        requiredParam(req.params.id)
+      );
+      res.status(204).send();
     } catch (error) {
       next(error);
     }

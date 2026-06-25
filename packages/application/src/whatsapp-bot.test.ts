@@ -26,6 +26,7 @@ function applicantRepository(overrides: Partial<ApplicantImportRepository> = {})
       throw new Error("not used");
     }),
     listStaffPool: vi.fn(async () => []),
+    removeFromStaffPool: vi.fn(async () => true),
     createDemoEvent: vi.fn(async () => {
       throw new Error("not used");
     }),

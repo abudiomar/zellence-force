@@ -148,7 +148,7 @@ describe("PostgreSQL Phase 2 Adapters", () => {
       })
     ).resolves.toMatchObject({ id: "row-1" });
     expect(query).toHaveBeenCalledWith(
-      expect.stringContaining("on conflict (tenant_id, source_hash)"),
+      expect.stringContaining("on conflict (tenant_id, source_id, source_range, source_row_id)"),
       expect.any(Array)
     );
     await expect(
@@ -263,6 +263,7 @@ describe("PostgreSQL Phase 2 Adapters", () => {
         return { rows: [applicantRow], rowCount: 1 };
       }
       if (sql.includes("insert into persons")) return { rows: [{ id: "person-1" }], rowCount: 1 };
+      if (sql.includes("delete from applicant_import_rows")) return { rows: [{ deleted_count: 1 }], rowCount: 1 };
       if (sql.includes("saved_to_staff_at")) return { rows: [applicantRow], rowCount: 1 };
       if (sql.includes("from applicant_import_rows") && sql.includes("saved_to_staff_at")) {
         return { rows: [applicantRow], rowCount: 1 };
@@ -330,6 +331,14 @@ describe("PostgreSQL Phase 2 Adapters", () => {
         finalScore: 4.33
       })
     ]);
+
+    await expect(
+      applicants.removeFromStaffPool({
+        tenantId: "tenant",
+        actorUserId: "hr",
+        rowId: "row-1"
+      })
+    ).resolves.toBe(true);
 
     await expect(
       applicants.createDemoEvent({

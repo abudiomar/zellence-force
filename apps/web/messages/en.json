@@ -94,6 +94,8 @@
         "experience": "Expertise",
         "city": "City",
         "nationality": "Nationality",
+        "language": "Language",
+        "score": "Score",
         "canTravel": "Can travel",
         "gender": "Gender",
         "genderAll": "All",

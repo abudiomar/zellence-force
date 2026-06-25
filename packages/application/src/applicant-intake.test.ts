@@ -57,6 +57,7 @@ function applicantRepository(overrides: Partial<ApplicantImportRepository> = {})
     updateInterviewPipeline: vi.fn(async () => queueItem()),
     saveToStaffPool: vi.fn(async () => ({ personId: "person-1", row: queueItem() })),
     listStaffPool: vi.fn(async () => []),
+    removeFromStaffPool: vi.fn(async () => true),
     createDemoEvent: vi.fn(async () => ({
       id: "demo-event-1",
       name: "Demo Event",

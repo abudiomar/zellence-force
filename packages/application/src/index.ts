@@ -218,6 +218,11 @@ export interface ApplicantImportRepository {
     tenantId: string;
     filter: StaffPoolFilter;
   }): Promise<StaffPoolItem[]>;
+  removeFromStaffPool(input: {
+    tenantId: string;
+    actorUserId: string;
+    rowId: string;
+  }): Promise<boolean>;
   createDemoEvent(input: {
     tenantId: string;
     actorUserId: string;
@@ -680,6 +685,22 @@ export async function listStaffPool(
   authorize(actor, PERMISSIONS.MANAGE_PEOPLE);
   const filter = STAFF_POOL_FILTER_SCHEMA.parse(rawFilter);
   return deps.applicants.listStaffPool({ tenantId: actor.tenantId, filter });
+}
+
+export async function removeStaffPoolCandidate(
+  deps: { applicants: ApplicantImportRepository },
+  actor: RequestActor,
+  rowId: string
+): Promise<void> {
+  authorize(actor, PERMISSIONS.MANAGE_PEOPLE);
+  const removed = await deps.applicants.removeFromStaffPool({
+    tenantId: actor.tenantId,
+    actorUserId: actor.id,
+    rowId
+  });
+  if (!removed) {
+    throw new ApplicationError("STAFF_POOL_CANDIDATE_NOT_FOUND", "Staff pool candidate not found", 404);
+  }
 }
 
 export async function createDemoEvent(
