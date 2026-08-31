@@ -1,0 +1,89 @@
+name: zellforce
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zellforce-postgres
+    environment:
+      POSTGRES_DB: zellforce
+      POSTGRES_USER: zellforce
+      POSTGRES_PASSWORD: ${ZELLFORCE_POSTGRES_PASSWORD:?set ZELLFORCE_POSTGRES_PASSWORD}
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zellforce -d zellforce"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+    networks:
+      - zellforce
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+      args:
+        NEXT_PUBLIC_API_URL: https://force.zellence.dev
+    container_name: zellforce-api
+    environment:
+      NODE_ENV: production
+      APP_ENV: production
+      APP_URL: https://force.zellence.dev
+      API_URL: https://force.zellence.dev
+      API_PORT: "4000"
+      DATABASE_URL: postgres://zellforce:${ZELLFORCE_POSTGRES_PASSWORD:?set ZELLFORCE_POSTGRES_PASSWORD}@postgres:5432/zellforce
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: https://force.zellence.dev
+      DB_SSL_MODE: disable
+      CORS_ORIGIN: https://force.zellence.dev
+      GOOGLE_SERVICE_ACCOUNT_JSON_PATH: /run/secrets/google-sheets-service-account.json
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${WHATSAPP_WEBHOOK_VERIFY_TOKEN:-}
+      WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+      LOG_LEVEL: info
+      DEFAULT_LANGUAGE: ar
+      DEFAULT_TIMEZONE: Asia/Riyadh
+      DEFAULT_CURRENCY: SAR
+    volumes:
+      - type: bind
+        source: /etc/zellence/secrets/google-sheets-service-account.json
+        target: /run/secrets/google-sheets-service-account.json
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4010:4000"
+    networks:
+      - zellforce
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+      args:
+        NEXT_PUBLIC_API_URL: https://force.zellence.dev
+    container_name: zellforce-web
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: https://force.zellence.dev
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:3010:3000"
+    networks:
+      - zellforce
+    restart: unless-stopped
+
+networks:
+  zellforce:
+    driver: bridge
